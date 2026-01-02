@@ -80,13 +80,17 @@ namespace Core.Player
             Vector3 endPos = target.Position;
             Vector3 moveDir = (endPos - startPos).normalized;
             
+            float distance = Vector3.Distance(startPos, endPos);
+            
             Quaternion targetRot = moveDir != Vector3.zero ? 
                 Quaternion.LookRotation(moveDir, Vector3.up) : transform.rotation;
 
-            float t = 0f;
-            while (t < 1f)
+            float progress = 0f;
+            while (progress < distance)
             {
-                t += Time.deltaTime * moveSpeed;
+                progress += Time.deltaTime * moveSpeed;
+                float t = progress / distance;
+
                 transform.position = Vector3.Lerp(startPos, endPos, t);
                 transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, t * rotationSpeed);
                 yield return null;
