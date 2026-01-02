@@ -15,7 +15,6 @@ namespace Core.Session
                 NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
                 NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
 
-                // Handle the Host/Server itself if it's already connected
                 if (NetworkManager.Singleton.IsServer)
                 {
                     OnClientConnected(NetworkManager.ServerClientId);

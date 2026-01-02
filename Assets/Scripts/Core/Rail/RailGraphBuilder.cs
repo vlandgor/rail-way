@@ -16,10 +16,9 @@ namespace Core.Rail
         [SerializeField] private int maxConnectionsPerNode = 3;
 
         [Header("Seed")]
-        [SerializeField] private int seed = 12345; // comes from server later
+        [SerializeField] private int seed = 12345;
 
         private readonly Dictionary<int, RailNode> _runtimeNodes = new();
-
         public IReadOnlyDictionary<int, RailNode> RuntimeNodes => _runtimeNodes;
 
         private void Awake()
@@ -46,7 +45,6 @@ namespace Core.Rail
         {
             _runtimeNodes.Clear();
 
-            // 1. Spawn nodes
             foreach (RailNodeData nodeData in graph.Nodes)
             {
                 RailNode node = Instantiate(
@@ -56,10 +54,13 @@ namespace Core.Rail
                     transform
                 );
 
+                // CRITICAL: Assign the ID so RailMover can find it!
+                node.Id = nodeData.Id;
+                node.name = $"Node_{node.Id}";
+
                 _runtimeNodes[nodeData.Id] = node;
             }
 
-            // 2. Connect nodes + spawn rails
             foreach (RailEdgeData edge in graph.Edges)
             {
                 RailNode a = _runtimeNodes[edge.FromNodeId];
@@ -76,29 +77,13 @@ namespace Core.Rail
 
             if (Mathf.Abs(dir.z) > Mathf.Abs(dir.x))
             {
-                if (dir.z > 0)
-                {
-                    a.Forward = b;
-                    b.Backward = a;
-                }
-                else
-                {
-                    a.Backward = b;
-                    b.Forward = a;
-                }
+                if (dir.z > 0) { a.Forward = b; b.Backward = a; }
+                else { a.Backward = b; b.Forward = a; }
             }
             else
             {
-                if (dir.x > 0)
-                {
-                    a.Right = b;
-                    b.Left = a;
-                }
-                else
-                {
-                    a.Left = b;
-                    b.Right = a;
-                }
+                if (dir.x > 0) { a.Right = b; b.Left = a; }
+                else { a.Left = b; b.Right = a; }
             }
         }
 

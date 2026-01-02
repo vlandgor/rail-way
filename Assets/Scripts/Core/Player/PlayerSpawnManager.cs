@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 using Core.Rail;
 using Unity.Netcode;
@@ -18,75 +17,36 @@ namespace Core.Player
         {
             if (_players.ContainsKey((int)clientId)) return;
 
+            // Get a unique node for this client
             RailNode spawnNode = spawnPoints.GetSpawnNode((int)clientId);
-
-            if (spawnNode == null) return;
+            if (spawnNode == null) 
+            {
+                Debug.LogError($"[SpawnManager] No spawn node found for client {clientId}");
+                return;
+            }
 
             RailMover player = Instantiate(playerPrefab);
             
+            // 1. SET THE DATA FIRST
             player.SetStartNode(spawnNode);
 
+            // 2. THEN SPAWN ON NETWORK
             NetworkObject netObj = player.GetComponent<NetworkObject>();
             netObj.SpawnAsPlayerObject(clientId);
 
             _players.Add((int)clientId, player);
+            Debug.Log($"[SpawnManager] Spawned Client {clientId} at Node {spawnNode.Id}");
         }
 
         public void DespawnPlayer(int playerId)
         {
-            if (!_players.TryGetValue(playerId, out RailMover player))
-            {
-                return;
-            }
+            if (!_players.TryGetValue(playerId, out RailMover player)) return;
 
             NetworkObject netObj = player.GetComponent<NetworkObject>();
-            
-            if (netObj != null && netObj.IsSpawned)
-            {
-                netObj.Despawn(); 
-            }
-            else
-            {
-                Destroy(player.gameObject);
-            }
+            if (netObj != null && netObj.IsSpawned) netObj.Despawn();
+            else Destroy(player.gameObject);
 
             _players.Remove(playerId);
-        }
-
-        public void SyncPlayers(IReadOnlyList<int> activePlayerIds)
-        {
-            List<int> toRemove = new();
-
-            foreach (int existingId in _players.Keys)
-            {
-                if (!activePlayerIds.Contains(existingId))
-                    toRemove.Add(existingId);
-            }
-
-            foreach (int id in toRemove)
-                DespawnPlayer(id);
-
-            foreach (int id in activePlayerIds)
-            {
-                if (!_players.ContainsKey(id))
-                    SpawnPlayer((ulong)id);
-            }
-        }
-
-        public RailMover GetPlayer(int playerId)
-        {
-            _players.TryGetValue(playerId, out RailMover player);
-            return player;
-        }
-
-        public void DespawnAll()
-        {
-            foreach (int id in _players.Keys.ToList())
-            {
-                DespawnPlayer(id);
-            }
-
-            _players.Clear();
         }
     }
 }
