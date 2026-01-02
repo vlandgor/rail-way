@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 582477219729393567}
   - component: {fileID: 7859901019289557492}
   m_Layer: 0
-  m_Name: RailPrefab
+  m_Name: RailVisualPrefab
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
