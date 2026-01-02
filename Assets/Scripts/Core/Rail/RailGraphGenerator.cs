@@ -7,125 +7,84 @@ namespace Core.Rail
     public class RailGraphGenerator
     {
         private int _nextNodeId;
-        private System.Random _rng;
+        private Dictionary<Vector2Int, RailNodeData> _posToNode;
 
-        public RailGraphData Generate(
-            int nodeCount,
-            float minDistance,
-            float maxDistance,
-            int maxConnectionsPerNode,
-            int seed)
+        public RailGraphData Generate(int width, int height, int iterations, float spacing, int seed)
         {
             _nextNodeId = 0;
-            _rng = new System.Random(seed);
+            _posToNode = new Dictionary<Vector2Int, RailNodeData>();
+            UnityEngine.Random.InitState(seed);
 
             RailGraphData graph = new RailGraphData();
+            List<RectInt> rooms = new List<RectInt> { new RectInt(0, 0, width, height) };
 
-            // 1. Start node
-            RailNodeData startNode = CreateNode(Vector3.zero);
-            graph.Nodes.Add(startNode);
-
-            // 2. Grow graph
-            while (graph.Nodes.Count < nodeCount)
+            for (int i = 0; i < iterations; i++)
             {
-                RailNodeData from = GetRandomNode(graph);
+                for (int j = rooms.Count - 1; j >= 0; j--)
+                {
+                    RectInt room = rooms[j];
+                    if (room.width <= 1 || room.height <= 1) continue;
 
-                if (from.ConnectedNodeIds.Count >= maxConnectionsPerNode)
-                    continue;
+                    rooms.RemoveAt(j);
+                    bool splitHorizontal = UnityEngine.Random.value > 0.5f;
+                    if (room.width > room.height * 1.5f) splitHorizontal = false;
+                    else if (room.height > room.width * 1.5f) splitHorizontal = true;
 
-                Vector3 dir = GetRandomDirection(graph, from);
-                float dist = Lerp(minDistance, maxDistance, NextFloat());
+                    if (splitHorizontal)
+                    {
+                        int split = UnityEngine.Random.Range(1, room.height);
+                        rooms.Add(new RectInt(room.x, room.y, room.width, split));
+                        rooms.Add(new RectInt(room.x, room.y + split, room.width, room.height - split));
+                    }
+                    else
+                    {
+                        int split = UnityEngine.Random.Range(1, room.width);
+                        rooms.Add(new RectInt(room.x, room.y, split, room.height));
+                        rooms.Add(new RectInt(room.x + split, room.y, room.width - split, room.height));
+                    }
+                }
+            }
 
-                Vector3 pos = from.Position + dir * dist;
+            foreach (var room in rooms)
+            {
+                Vector2Int p1 = new Vector2Int(room.xMin, room.yMin);
+                Vector2Int p2 = new Vector2Int(room.xMax, room.yMin);
+                Vector2Int p3 = new Vector2Int(room.xMax, room.yMax);
+                Vector2Int p4 = new Vector2Int(room.xMin, room.yMax);
 
-                RailNodeData newNode = CreateNode(pos);
-
-                graph.Nodes.Add(newNode);
-                ConnectNodes(graph, from, newNode);
+                AddEdge(graph, p1, p2, spacing);
+                AddEdge(graph, p2, p3, spacing);
+                AddEdge(graph, p3, p4, spacing);
+                AddEdge(graph, p4, p1, spacing);
             }
 
             return graph;
         }
 
-        private RailNodeData CreateNode(Vector3 position)
+        private void AddEdge(RailGraphData graph, Vector2Int p1, Vector2Int p2, float spacing)
         {
-            return new RailNodeData
+            RailNodeData n1 = GetOrCreateNode(graph, p1, spacing);
+            RailNodeData n2 = GetOrCreateNode(graph, p2, spacing);
+
+            if (n1.ConnectedNodeIds.Contains(n2.Id)) return;
+
+            n1.ConnectedNodeIds.Add(n2.Id);
+            n2.ConnectedNodeIds.Add(n1.Id);
+            graph.Edges.Add(new RailEdgeData { FromNodeId = n1.Id, ToNodeId = n2.Id });
+        }
+
+        private RailNodeData GetOrCreateNode(RailGraphData graph, Vector2Int pos, float spacing)
+        {
+            if (_posToNode.TryGetValue(pos, out RailNodeData existing)) return existing;
+
+            RailNodeData newNode = new RailNodeData
             {
                 Id = _nextNodeId++,
-                Position = position
+                Position = new Vector3(pos.x * spacing, 0, pos.y * spacing)
             };
-        }
-
-        private void ConnectNodes(RailGraphData graph, RailNodeData a, RailNodeData b)
-        {
-            a.ConnectedNodeIds.Add(b.Id);
-            b.ConnectedNodeIds.Add(a.Id);
-
-            graph.Edges.Add(new RailEdgeData
-            {
-                FromNodeId = a.Id,
-                ToNodeId = b.Id
-            });
-        }
-
-        private RailNodeData GetRandomNode(RailGraphData graph)
-        {
-            return graph.Nodes[_rng.Next(graph.Nodes.Count)];
-        }
-
-        // ======================================================
-        // Direction logic
-        // ======================================================
-
-        private Vector3 GetRandomDirection(RailGraphData graph, RailNodeData from)
-        {
-            bool allowForward = HasSideConnection(graph, from);
-
-            List<Vector3> directions = new()
-            {
-                Vector3.left,
-                Vector3.right,
-                Vector3.back
-            };
-
-            if (allowForward)
-                directions.Add(Vector3.forward);
-
-            return directions[_rng.Next(directions.Count)];
-        }
-
-        private bool HasSideConnection(RailGraphData graph, RailNodeData node)
-        {
-            foreach (int connectedId in node.ConnectedNodeIds)
-            {
-                RailNodeData other = graph.Nodes.Find(n => n.Id == connectedId);
-                if (other == null)
-                    continue;
-
-                Vector3 dir = (other.Position - node.Position).normalized;
-
-                if (Vector3.Dot(dir, Vector3.left) > 0.9f ||
-                    Vector3.Dot(dir, Vector3.right) > 0.9f)
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        // ======================================================
-        // RNG helpers
-        // ======================================================
-
-        private float NextFloat()
-        {
-            return (float)_rng.NextDouble();
-        }
-
-        private float Lerp(float a, float b, float t)
-        {
-            return a + (b - a) * t;
+            graph.Nodes.Add(newNode);
+            _posToNode[pos] = newNode;
+            return newNode;
         }
     }
 }

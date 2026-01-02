@@ -21,8 +21,6 @@ namespace Core.Player
 
         public override void OnNetworkSpawn()
         {
-            Debug.Log($"[RailMover] Spawned. ID in NetVar: {_currentNodeId.Value}. IsOwner: {IsOwner}");
-
             if (_currentNodeId.Value != -1)
             {
                 StartCoroutine(WaitAndSyncNode(_currentNodeId.Value));
@@ -43,10 +41,7 @@ namespace Core.Player
             {
                 builder = Object.FindFirstObjectByType<RailGraphBuilder>();
                 attempts++;
-                if(attempts > 100) 
-                {
-                    yield break;
-                }
+                if(attempts > 100) yield break;
                 yield return null; 
             }
 
@@ -118,7 +113,6 @@ namespace Core.Player
             if (other.CompareTag("Player"))
             {
                 _lastCollisionTime = Time.time;
-                Debug.Log($"[Collision] Bonk! Reversing to Node {(_originNode != null ? _originNode.Id : -1)}");
                 HandleTurnAround();
             }
         }
@@ -143,34 +137,49 @@ namespace Core.Player
         private RailNode GetTargetNodeRelative(Vector2Int inputDir)
         {
             if (inputDir == Vector2Int.zero) return null;
-            Vector3 worldDir = transform.forward * inputDir.y + transform.right * inputDir.x;
-            worldDir.y = 0f;
+            
+            Vector3 lookDir = transform.forward;
+            Vector3 rightDir = transform.right;
+
+            Vector3 worldDir = (lookDir * inputDir.y) + (rightDir * inputDir.x);
             worldDir.Normalize();
-            return GetNodeByWorldDirection(worldDir);
+
+            return GetNodeByWorldDirection(worldDir, inputDir.y > 0);
         }
 
-        private RailNode GetNodeByWorldDirection(Vector3 worldDir)
+        private RailNode GetNodeByWorldDirection(Vector3 worldDir, bool isAttemptingForward)
         {
+            if (isAttemptingForward && !HasSideConnections())
+            {
+                return null;
+            }
+
             float bestDot = 0.5f;
             RailNode bestNode = null;
 
-            TryCandidate(CurrentNode.Forward, Vector3.forward);
-            TryCandidate(CurrentNode.Backward, Vector3.back);
-            TryCandidate(CurrentNode.Left, Vector3.left);
-            TryCandidate(CurrentNode.Right, Vector3.right);
+            TryCandidate(CurrentNode.Forward);
+            TryCandidate(CurrentNode.Backward);
+            TryCandidate(CurrentNode.Left);
+            TryCandidate(CurrentNode.Right);
 
             return bestNode;
 
-            void TryCandidate(RailNode node, Vector3 nodeDir)
+            void TryCandidate(RailNode node)
             {
                 if (node == null) return;
-                float dot = Vector3.Dot(worldDir, nodeDir);
+                Vector3 dirToNode = (node.Position - CurrentNode.Position).normalized;
+                float dot = Vector3.Dot(worldDir, dirToNode);
                 if (dot > bestDot)
                 {
                     bestDot = dot;
                     bestNode = node;
                 }
             }
+        }
+
+        private bool HasSideConnections()
+        {
+            return CurrentNode.Left != null || CurrentNode.Right != null;
         }
 
         [ServerRpc]
