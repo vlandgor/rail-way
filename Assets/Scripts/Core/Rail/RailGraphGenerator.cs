@@ -1,23 +1,27 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 namespace Core.Rail
 {
     public class RailGraphGenerator
     {
         private int _nextNodeId;
+        private System.Random _rng;
 
         public RailGraphData Generate(
             int nodeCount,
             float minDistance,
             float maxDistance,
-            int maxConnectionsPerNode)
+            int maxConnectionsPerNode,
+            int seed)
         {
             _nextNodeId = 0;
+            _rng = new System.Random(seed);
 
             RailGraphData graph = new RailGraphData();
 
-            // 1. Create start node
+            // 1. Start node
             RailNodeData startNode = CreateNode(Vector3.zero);
             graph.Nodes.Add(startNode);
 
@@ -25,11 +29,13 @@ namespace Core.Rail
             while (graph.Nodes.Count < nodeCount)
             {
                 RailNodeData from = GetRandomNode(graph);
+
                 if (from.ConnectedNodeIds.Count >= maxConnectionsPerNode)
                     continue;
 
                 Vector3 dir = GetRandomDirection(graph, from);
-                float dist = Random.Range(minDistance, maxDistance);
+                float dist = Lerp(minDistance, maxDistance, NextFloat());
+
                 Vector3 pos = from.Position + dir * dist;
 
                 RailNodeData newNode = CreateNode(pos);
@@ -64,7 +70,7 @@ namespace Core.Rail
 
         private RailNodeData GetRandomNode(RailGraphData graph)
         {
-            return graph.Nodes[Random.Range(0, graph.Nodes.Count)];
+            return graph.Nodes[_rng.Next(graph.Nodes.Count)];
         }
 
         // ======================================================
@@ -85,7 +91,7 @@ namespace Core.Rail
             if (allowForward)
                 directions.Add(Vector3.forward);
 
-            return directions[Random.Range(0, directions.Count)];
+            return directions[_rng.Next(directions.Count)];
         }
 
         private bool HasSideConnection(RailGraphData graph, RailNodeData node)
@@ -106,6 +112,20 @@ namespace Core.Rail
             }
 
             return false;
+        }
+
+        // ======================================================
+        // RNG helpers
+        // ======================================================
+
+        private float NextFloat()
+        {
+            return (float)_rng.NextDouble();
+        }
+
+        private float Lerp(float a, float b, float t)
+        {
+            return a + (b - a) * t;
         }
     }
 }

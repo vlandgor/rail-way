@@ -1,10 +1,11 @@
 using System.Collections;
 using Core.Rail;
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Core.Player
 {
-    public class RailMover : MonoBehaviour
+    public class RailMover : NetworkBehaviour
     {
         [SerializeField] private float moveSpeed = 5f;
         [SerializeField] private float rotationSpeed = 12f;
@@ -23,6 +24,8 @@ namespace Core.Player
             if (IsMoving || CurrentNode == null)
                 return false;
 
+            Debug.Log($"[Client {NetworkManager.Singleton.LocalClientId}] TryMove called");
+            
             RailNode target = GetTargetNodeRelative(inputDir);
             if (target == null)
                 return false;
@@ -31,20 +34,12 @@ namespace Core.Player
             return true;
         }
 
-        // =========================
-        // RELATIVE DIRECTION LOGIC
-        // =========================
-
         private RailNode GetTargetNodeRelative(Vector2Int inputDir)
         {
             if (inputDir == Vector2Int.zero)
                 return null;
 
-            // Convert local input → world direction
-            Vector3 worldDir =
-                transform.forward * inputDir.y +
-                transform.right * inputDir.x;
-
+            Vector3 worldDir = transform.forward * inputDir.y + transform.right * inputDir.x;
             worldDir.y = 0f;
             worldDir.Normalize();
 
@@ -53,7 +48,7 @@ namespace Core.Player
 
         private RailNode GetNodeByWorldDirection(Vector3 worldDir)
         {
-            float bestDot = 0.5f; // threshold prevents weird sideways moves
+            float bestDot = 0.5f;
             RailNode bestNode = null;
 
             TryCandidate(CurrentNode.Forward, Vector3.forward);
@@ -65,9 +60,7 @@ namespace Core.Player
 
             void TryCandidate(RailNode node, Vector3 nodeDir)
             {
-                if (node == null)
-                    return;
-
+                if (node == null) return;
                 float dot = Vector3.Dot(worldDir, nodeDir);
                 if (dot > bestDot)
                 {
@@ -76,10 +69,6 @@ namespace Core.Player
                 }
             }
         }
-
-        // =========================
-        // MOVEMENT + ROTATION
-        // =========================
 
         private IEnumerator MoveRoutine(RailNode target)
         {
@@ -97,10 +86,8 @@ namespace Core.Player
             while (t < 1f)
             {
                 t += Time.deltaTime * moveSpeed;
-
                 transform.position = Vector3.Lerp(startPos, endPos, t);
                 transform.rotation = Quaternion.Slerp(startRot, targetRot, t * rotationSpeed);
-
                 yield return null;
             }
 

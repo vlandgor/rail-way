@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using Core.Player;
 
 namespace Core.Rail
 {
@@ -9,21 +8,44 @@ namespace Core.Rail
         [Header("Prefabs")]
         [SerializeField] private GameObject railPrefab;
         [SerializeField] private RailNode railNodePrefab;
-        [SerializeField] private RailMover playerPrefab;
+
+        [Header("Generation")]
+        [SerializeField] private int nodeCount = 10;
+        [SerializeField] private float minDistance = 3f;
+        [SerializeField] private float maxDistance = 5f;
+        [SerializeField] private int maxConnectionsPerNode = 3;
+
+        [Header("Seed")]
+        [SerializeField] private int seed = 12345; // comes from server later
 
         private readonly Dictionary<int, RailNode> _runtimeNodes = new();
 
-        private void Start()
-        {
-            RailGraphGenerator generator = new RailGraphGenerator();
-            RailGraphData graph = generator.Generate(10, 3, 5, 3);
+        public IReadOnlyDictionary<int, RailNode> RuntimeNodes => _runtimeNodes;
 
-            Build(graph);
-            SpawnPlayer(graph);
+        private void Awake()
+        {
+            BuildGraph();
         }
 
-        public void Build(RailGraphData graph)
+        private void BuildGraph()
         {
+            RailGraphGenerator generator = new RailGraphGenerator();
+
+            RailGraphData graph = generator.Generate(
+                nodeCount,
+                minDistance,
+                maxDistance,
+                maxConnectionsPerNode,
+                seed
+            );
+
+            Build(graph);
+        }
+
+        private void Build(RailGraphData graph)
+        {
+            _runtimeNodes.Clear();
+
             // 1. Spawn nodes
             foreach (RailNodeData nodeData in graph.Nodes)
             {
@@ -52,7 +74,6 @@ namespace Core.Rail
         {
             Vector3 dir = (b.transform.position - a.transform.position).normalized;
 
-            // Simple axis-based connection
             if (Mathf.Abs(dir.z) > Mathf.Abs(dir.x))
             {
                 if (dir.z > 0)
@@ -93,16 +114,6 @@ namespace Core.Rail
                 rail.transform.localScale.y,
                 dir.magnitude
             );
-        }
-
-        private void SpawnPlayer(RailGraphData graph)
-        {
-            // Pick first node (later you can choose by tag/type)
-            RailNodeData startNodeData = graph.Nodes[0];
-            RailNode startNode = _runtimeNodes[startNodeData.Id];
-
-            RailMover player = Instantiate(playerPrefab);
-            player.SetStartNode(startNode);
         }
     }
 }

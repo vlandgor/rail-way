@@ -1,14 +1,21 @@
+using Unity.Netcode;
 using UnityEngine;
 
 namespace Core.Player
 {
-    public class PlayerInput : MonoBehaviour
+    public class PlayerInput : NetworkBehaviour
     {
         public Vector2Int MoveDirection { get; private set; }
         public bool HasInput { get; private set; }
 
+        // REMOVE any "enabled = false" logic from OnNetworkSpawn 
+        // to ensure the script is active when the owner needs it.
+
         private void Update()
         {
+            // IMPORTANT: Only process hardware input for the local owner
+            if (!IsOwner) return;
+
             HasInput = false;
             MoveDirection = Vector2Int.zero;
 
