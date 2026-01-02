@@ -12,6 +12,10 @@ namespace Core.Player
 
         private readonly NetworkVariable<int> _currentNodeId = new NetworkVariable<int>(-1);
 
+        private Coroutine _activeMoveRoutine;
+        private RailNode _originNode; 
+        private float _lastCollisionTime;
+
         public RailNode CurrentNode { get; private set; }
         public bool IsMoving { get; private set; }
 
@@ -26,7 +30,7 @@ namespace Core.Player
 
             _currentNodeId.OnValueChanged += (oldVal, newVal) => 
             {
-                StartCoroutine(WaitAndSyncNode(newVal));
+                if (!IsOwner) StartCoroutine(WaitAndSyncNode(newVal));
             };
         }
 
@@ -41,7 +45,6 @@ namespace Core.Player
                 attempts++;
                 if(attempts > 100) 
                 {
-                    Debug.LogError($"[RailMover] Failed to find Node {id} after 100 frames!");
                     yield break;
                 }
                 yield return null; 
@@ -53,8 +56,6 @@ namespace Core.Player
             {
                 transform.position = CurrentNode.Position;
             }
-            
-            Debug.Log($"[RailMover] Successfully synced to Node {id} (Name: {CurrentNode.name})");
         }
 
         public void SetStartNode(RailNode node)
@@ -62,22 +63,81 @@ namespace Core.Player
             _currentNodeId.Value = node.Id;
             CurrentNode = node;
             transform.position = node.Position;
-            Debug.Log($"[RailMover] Server set start node to {node.Id}");
         }
 
         public bool TryMove(Vector2Int inputDir)
         {
-            if (IsMoving || CurrentNode == null)
-            {
-                Debug.LogWarning($"[RailMover] Move denied. IsMoving: {IsMoving}, CurrentNode: {CurrentNode}");
-                return false;
-            }
+            if (IsMoving || CurrentNode == null) return false;
 
             RailNode target = GetTargetNodeRelative(inputDir);
             if (target == null) return false;
 
-            StartCoroutine(MoveRoutine(target));
+            _originNode = CurrentNode; 
+            _activeMoveRoutine = StartCoroutine(MoveRoutine(target));
             return true;
+        }
+
+        private IEnumerator MoveRoutine(RailNode target)
+        {
+            IsMoving = true;
+
+            Vector3 startPos = transform.position;
+            Vector3 endPos = target.Position;
+            Vector3 moveDir = (endPos - startPos).normalized;
+            
+            Quaternion targetRot = moveDir != Vector3.zero ? 
+                Quaternion.LookRotation(moveDir, Vector3.up) : transform.rotation;
+
+            float t = 0f;
+            while (t < 1f)
+            {
+                t += Time.deltaTime * moveSpeed;
+                transform.position = Vector3.Lerp(startPos, endPos, t);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, t * rotationSpeed);
+                yield return null;
+            }
+
+            transform.position = endPos;
+            transform.rotation = targetRot;
+            CurrentNode = target;
+
+            if (IsOwner)
+            {
+                UpdateNodeServerRpc(target.Id);
+            }
+
+            IsMoving = false;
+            _activeMoveRoutine = null;
+        }
+
+        private void OnTriggerEnter(Collider other)
+        {
+            if (!IsOwner || !IsMoving) return;
+            if (Time.time < _lastCollisionTime + 0.2f) return;
+
+            if (other.CompareTag("Player"))
+            {
+                _lastCollisionTime = Time.time;
+                Debug.Log($"[Collision] Bonk! Reversing to Node {(_originNode != null ? _originNode.Id : -1)}");
+                HandleTurnAround();
+            }
+        }
+
+        private void HandleTurnAround()
+        {
+            if (_activeMoveRoutine != null)
+            {
+                StopCoroutine(_activeMoveRoutine);
+            }
+
+            if (_originNode != null)
+            {
+                _activeMoveRoutine = StartCoroutine(MoveRoutine(_originNode));
+            }
+            else
+            {
+                IsMoving = false;
+            }
         }
 
         private RailNode GetTargetNodeRelative(Vector2Int inputDir)
@@ -111,36 +171,6 @@ namespace Core.Player
                     bestNode = node;
                 }
             }
-        }
-
-        private IEnumerator MoveRoutine(RailNode target)
-        {
-            IsMoving = true;
-
-            Vector3 startPos = transform.position;
-            Vector3 endPos = target.Position;
-            Vector3 moveDir = (endPos - startPos).normalized;
-            Quaternion targetRot = Quaternion.LookRotation(moveDir, Vector3.up);
-
-            float t = 0f;
-            while (t < 1f)
-            {
-                t += Time.deltaTime * moveSpeed;
-                transform.position = Vector3.Lerp(startPos, endPos, t);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, t * rotationSpeed);
-                yield return null;
-            }
-
-            transform.position = endPos;
-            transform.rotation = targetRot;
-            CurrentNode = target;
-
-            if (IsOwner)
-            {
-                UpdateNodeServerRpc(target.Id);
-            }
-
-            IsMoving = false;
         }
 
         [ServerRpc]
