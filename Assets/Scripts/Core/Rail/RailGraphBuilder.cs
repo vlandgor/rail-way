@@ -16,11 +16,10 @@ namespace Core.Rail
         [Header("Grid Layout")]
         [SerializeField] private int gridWidth = 10;
         [SerializeField] private int gridHeight = 10;
-        [SerializeField] private int subdivisions = 20;
-        [SerializeField] private float spacing = 1f;
+        [SerializeField] private int subdivisions = 5;
 
         [Header("Seed")]
-        [SerializeField] private int seed = 12345;
+        [SerializeField] private int seed = 54321;
 
         private readonly Dictionary<int, RailNode> _runtimeNodes = new();
         public IReadOnlyDictionary<int, RailNode> RuntimeNodes => _runtimeNodes;
@@ -33,7 +32,7 @@ namespace Core.Rail
         private void BuildGraph()
         {
             RailGraphGenerator generator = new RailGraphGenerator();
-            RailGraphData graph = generator.Generate(gridWidth, gridHeight, subdivisions, spacing, seed);
+            RailGraphData graph = generator.Generate(gridWidth, gridHeight, subdivisions, seed);
             Build(graph);
         }
 
@@ -51,9 +50,16 @@ namespace Core.Rail
 
             _runtimeNodes.Clear();
 
+            // This offset moves the (0,0) corner to (-5,-5), centering the (10,10) grid at (0,0)
+            Vector3 centerOffset = new Vector3(gridWidth * 0.5f, 0, gridHeight * 0.5f);
+
             foreach (RailNodeData nodeData in graph.Nodes)
             {
-                 RailNode node = Instantiate(railNodePrefab, nodeData.Position, Quaternion.identity, _railNodesTransform);
+                // Subtract the offset before converting to world space
+                Vector3 localPos = nodeData.Position - centerOffset;
+                Vector3 worldPos = transform.TransformPoint(localPos);
+
+                RailNode node = Instantiate(railNodePrefab, worldPos, Quaternion.identity, _railNodesTransform);
                 node.Id = nodeData.Id;
                 node.name = $"Node_{node.Id}";
                 _runtimeNodes[nodeData.Id] = node;
@@ -61,11 +67,12 @@ namespace Core.Rail
 
             foreach (RailEdgeData edge in graph.Edges)
             {
-                RailNode a = _runtimeNodes[edge.FromNodeId];
-                RailNode b = _runtimeNodes[edge.ToNodeId];
-                
-                ConnectNodes(a, b);
-                SpawnVisualRail(a.transform.position, b.transform.position);
+                if (_runtimeNodes.TryGetValue(edge.FromNodeId, out RailNode a) && 
+                    _runtimeNodes.TryGetValue(edge.ToNodeId, out RailNode b))
+                {
+                    ConnectNodes(a, b);
+                    SpawnVisualRail(a.transform.position, b.transform.position);
+                }
             }
         }
 

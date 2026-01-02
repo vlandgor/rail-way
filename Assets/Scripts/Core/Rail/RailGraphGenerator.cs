@@ -8,7 +8,7 @@ namespace Core.Rail
         private int _nextNodeId;
         private Dictionary<Vector2Int, RailNodeData> _posToNode;
 
-        public RailGraphData Generate(int width, int height, int iterations, float spacing, int seed)
+        public RailGraphData Generate(int width, int height, int iterations, int seed)
         {
             _nextNodeId = 0;
             _posToNode = new Dictionary<Vector2Int, RailNodeData>();
@@ -51,19 +51,19 @@ namespace Core.Rail
                 Vector2Int p3 = new Vector2Int(room.xMax, room.yMax);
                 Vector2Int p4 = new Vector2Int(room.xMin, room.yMax);
 
-                AddEdge(graph, p1, p2, spacing);
-                AddEdge(graph, p2, p3, spacing);
-                AddEdge(graph, p3, p4, spacing);
-                AddEdge(graph, p4, p1, spacing);
+                AddEdge(graph, p1, p2);
+                AddEdge(graph, p2, p3);
+                AddEdge(graph, p3, p4);
+                AddEdge(graph, p4, p1);
             }
 
             return graph;
         }
 
-        private void AddEdge(RailGraphData graph, Vector2Int p1, Vector2Int p2, float spacing)
+        private void AddEdge(RailGraphData graph, Vector2Int p1, Vector2Int p2)
         {
-            RailNodeData n1 = GetOrCreateNode(graph, p1, spacing);
-            RailNodeData n2 = GetOrCreateNode(graph, p2, spacing);
+            RailNodeData n1 = GetOrCreateNode(graph, p1);
+            RailNodeData n2 = GetOrCreateNode(graph, p2);
 
             if (n1.ConnectedNodeIds.Contains(n2.Id)) return;
 
@@ -72,14 +72,14 @@ namespace Core.Rail
             graph.Edges.Add(new RailEdgeData { FromNodeId = n1.Id, ToNodeId = n2.Id });
         }
 
-        private RailNodeData GetOrCreateNode(RailGraphData graph, Vector2Int pos, float spacing)
+        private RailNodeData GetOrCreateNode(RailGraphData graph, Vector2Int pos)
         {
             if (_posToNode.TryGetValue(pos, out RailNodeData existing)) return existing;
 
             RailNodeData newNode = new RailNodeData
             {
                 Id = _nextNodeId++,
-                Position = new Vector3(pos.x * spacing, 0, pos.y * spacing)
+                Position = new Vector3(pos.x, 0, pos.y)
             };
             graph.Nodes.Add(newNode);
             _posToNode[pos] = newNode;
