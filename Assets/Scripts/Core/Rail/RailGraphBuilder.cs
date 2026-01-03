@@ -9,7 +9,7 @@ namespace Core.Rail
         [SerializeField] private RailNode railNodePrefab;
         [SerializeField] private GameObject railVisualPrefab;
 
-        [Space] 
+        [Space]
         [SerializeField] private Transform _railNodesTransform;
         [SerializeField] private Transform _railVisualsTransform;
 
@@ -18,48 +18,74 @@ namespace Core.Rail
         [SerializeField] private int gridHeight = 10;
         [SerializeField] private int subdivisions = 5;
 
-        [Header("Seed")]
-        [SerializeField] private int seed = 54321;
+        [Header("Debug / Fallback Seed")]
+        [SerializeField] private int debugSeed = 54321;
+
+        private int _seed;
+        private bool _hasSeed;
 
         private readonly Dictionary<int, RailNode> _runtimeNodes = new();
         public IReadOnlyDictionary<int, RailNode> RuntimeNodes => _runtimeNodes;
 
-        private void Awake()
+        // =========================
+        // Public API
+        // =========================
+
+        /// <summary>
+        /// Sets the deterministic seed used to generate the rail graph.
+        /// Must be called before Build().
+        /// </summary>
+        public void SetSeed(int seed)
         {
-            BuildGraph();
+            _seed = seed;
+            _hasSeed = true;
         }
 
-        private void BuildGraph()
+        /// <summary>
+        /// Builds the rail graph using the provided seed.
+        /// </summary>
+        public void Build()
         {
+            if (!_hasSeed)
+            {
+                Debug.LogWarning(
+                    "[RailGraphBuilder] Seed was not set. Using debug seed.");
+                _seed = debugSeed;
+            }
+
             RailGraphGenerator generator = new RailGraphGenerator();
-            RailGraphData graph = generator.Generate(gridWidth, gridHeight, subdivisions, seed);
-            Build(graph);
+            RailGraphData graph = generator.Generate(
+                gridWidth,
+                gridHeight,
+                subdivisions,
+                _seed);
+
+            BuildInternal(graph);
         }
 
-        private void Build(RailGraphData graph)
+        // =========================
+        // Internal Build
+        // =========================
+
+        private void BuildInternal(RailGraphData graph)
         {
-            if (_railNodesTransform != null)
-            {
-                foreach (Transform child in _railNodesTransform) Destroy(child.gameObject);
-            }
+            ClearPreviousBuild();
 
-            if (_railVisualsTransform != null)
-            {
-                foreach (Transform child in _railVisualsTransform) Destroy(child.gameObject);
-            }
-
-            _runtimeNodes.Clear();
-
-            // This offset moves the (0,0) corner to (-5,-5), centering the (10,10) grid at (0,0)
-            Vector3 centerOffset = new Vector3(gridWidth * 0.5f, 0, gridHeight * 0.5f);
+            // Centers the grid at (0,0)
+            Vector3 centerOffset =
+                new Vector3(gridWidth * 0.5f, 0f, gridHeight * 0.5f);
 
             foreach (RailNodeData nodeData in graph.Nodes)
             {
-                // Subtract the offset before converting to world space
                 Vector3 localPos = nodeData.Position - centerOffset;
                 Vector3 worldPos = transform.TransformPoint(localPos);
 
-                RailNode node = Instantiate(railNodePrefab, worldPos, Quaternion.identity, _railNodesTransform);
+                RailNode node = Instantiate(
+                    railNodePrefab,
+                    worldPos,
+                    Quaternion.identity,
+                    _railNodesTransform);
+
                 node.Id = nodeData.Id;
                 node.name = $"Node_{node.Id}";
                 _runtimeNodes[nodeData.Id] = node;
@@ -67,7 +93,7 @@ namespace Core.Rail
 
             foreach (RailEdgeData edge in graph.Edges)
             {
-                if (_runtimeNodes.TryGetValue(edge.FromNodeId, out RailNode a) && 
+                if (_runtimeNodes.TryGetValue(edge.FromNodeId, out RailNode a) &&
                     _runtimeNodes.TryGetValue(edge.ToNodeId, out RailNode b))
                 {
                     ConnectNodes(a, b);
@@ -76,28 +102,74 @@ namespace Core.Rail
             }
         }
 
+        private void ClearPreviousBuild()
+        {
+            if (_railNodesTransform != null)
+            {
+                foreach (Transform child in _railNodesTransform)
+                    Destroy(child.gameObject);
+            }
+
+            if (_railVisualsTransform != null)
+            {
+                foreach (Transform child in _railVisualsTransform)
+                    Destroy(child.gameObject);
+            }
+
+            _runtimeNodes.Clear();
+        }
+
+        // =========================
+        // Node Connectivity
+        // =========================
+
         private void ConnectNodes(RailNode a, RailNode b)
         {
             Vector3 dir = (b.transform.position - a.transform.position).normalized;
 
             if (Mathf.Abs(dir.z) > 0.9f)
             {
-                if (dir.z > 0) { a.Forward = b; b.Backward = a; }
-                else { a.Backward = b; b.Forward = a; }
+                if (dir.z > 0)
+                {
+                    a.Forward = b;
+                    b.Backward = a;
+                }
+                else
+                {
+                    a.Backward = b;
+                    b.Forward = a;
+                }
             }
             else if (Mathf.Abs(dir.x) > 0.9f)
             {
-                if (dir.x > 0) { a.Right = b; b.Left = a; }
-                else { a.Left = b; b.Right = a; }
+                if (dir.x > 0)
+                {
+                    a.Right = b;
+                    b.Left = a;
+                }
+                else
+                {
+                    a.Left = b;
+                    b.Right = a;
+                }
             }
         }
 
+        // =========================
+        // Visual Rails
+        // =========================
+
         private void SpawnVisualRail(Vector3 posA, Vector3 posB)
         {
-            Vector3 midPoint = (posA + posB) / 2f;
+            Vector3 midPoint = (posA + posB) * 0.5f;
             float distance = Vector3.Distance(posA, posB);
 
-            GameObject visualRail = Instantiate(railVisualPrefab, midPoint, Quaternion.identity, _railVisualsTransform);
+            GameObject visualRail = Instantiate(
+                railVisualPrefab,
+                midPoint,
+                Quaternion.identity,
+                _railVisualsTransform);
+
             visualRail.transform.forward = (posB - posA).normalized;
 
             Vector3 scale = visualRail.transform.localScale;

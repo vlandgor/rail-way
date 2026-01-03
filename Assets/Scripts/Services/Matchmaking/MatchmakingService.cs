@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
@@ -17,6 +18,12 @@ namespace Services.Matchmaking
 
         private const int MaxPlayers = 2;
         private const float HeartbeatInterval = 15f;
+        
+        public Lobby CurrentLobby => _currentLobby;
+
+        public bool IsHostPlayer =>
+            _currentLobby != null &&
+            _currentLobby.HostId == AuthenticationService.Instance.PlayerId;
 
         private void Awake()
         {
@@ -89,44 +96,85 @@ namespace Services.Matchmaking
             {
                 try
                 {
-                    _currentLobby =
-                        await LobbyService.Instance.GetLobbyAsync(_currentLobby.Id);
+                    _currentLobby = await LobbyService.Instance.GetLobbyAsync(_currentLobby.Id);
 
-                    Debug.Log($"Lobby players: {_currentLobby.Players.Count}");
-
-                    if (_currentLobby.Players.Count == MaxPlayers)
+                    if (IsHost() && _currentLobby.Players.Count == MaxPlayers)
                     {
-                        if (IsHost())
-                            StartGame();
+                        StartGame();
+                        break;
+                    }
 
+                    if (!IsHost() &&
+                        _currentLobby.Data != null &&
+                        _currentLobby.Data.TryGetValue("state", out var state) &&
+                        state.Value == "starting")
+                    {
+                        SceneManager.LoadScene("Game_Scene");
                         break;
                     }
                 }
                 catch (LobbyServiceException e)
                 {
-                    Debug.LogWarning($"Lobby error: {e.Message}");
-                    break;
+                    if (e.Reason == LobbyExceptionReason.RateLimited)
+                    {
+                        await Task.Delay(2000); 
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
 
-                await Task.Delay(1000);
+                await Task.Delay(1500); // Increased from 500ms
             }
         }
+
 
         private bool IsHost()
         {
             return _currentLobby != null &&
                    _currentLobby.HostId == AuthenticationService.Instance.PlayerId;
         }
+        
+        public void RefreshLobby(Lobby lobby)
+        {
+            _currentLobby = lobby;
+        }
 
         // =========================
         // Game Start
         // =========================
 
-        private void StartGame()
+        private async void StartGame()
         {
-            Debug.Log("Match ready. Starting game.");
+            int seed = Random.Range(int.MinValue, int.MaxValue);
+
+            Debug.Log($"Host starting game with seed {seed}");
+
+            var data = new Dictionary<string, DataObject>
+            {
+                {
+                    "seed",
+                    new DataObject(
+                        DataObject.VisibilityOptions.Member,
+                        seed.ToString())
+                },
+                {
+                    "state",
+                    new DataObject(
+                        DataObject.VisibilityOptions.Member,
+                        "starting")
+                }
+            };
+
+            await LobbyService.Instance.UpdateLobbyAsync(
+                _currentLobby.Id,
+                new UpdateLobbyOptions { Data = data });
+
             SceneManager.LoadScene("Game_Scene");
         }
+
+
 
         // =========================
         // Unity Services
