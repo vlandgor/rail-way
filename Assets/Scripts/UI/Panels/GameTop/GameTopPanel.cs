@@ -7,14 +7,17 @@ namespace UI.Panels.GameTop
     public class GameTopPanel : MonoBehaviour
     {
         [SerializeField] private TextMeshProUGUI uiStatusText;
+        [SerializeField] private TextMeshProUGUI uiTimerText;
 
         private void Start()
         {
-            if (TagGameManager.Instance != null)
+            var status = TagGameManager.Instance;
+            if (status != null)
             {
-                TagGameManager.Instance.OnCountdownChanged += HandleCountdownChanged;
-                TagGameManager.Instance.OnGameActiveChanged += HandleGameActiveChanged;
-                TagGameManager.Instance.OnTaggerChanged += HandleTaggerChanged;
+                status.OnCountdownChanged += HandleCountdownChanged;
+                status.OnGameActiveChanged += HandleGameActiveChanged;
+                status.OnTaggerChanged += HandleTaggerChanged;
+                status.OnMatchTimerChanged += HandleMatchTimerChanged;
                 
                 RefreshUI();
             }
@@ -22,32 +25,50 @@ namespace UI.Panels.GameTop
 
         private void OnDestroy()
         {
-            if (TagGameManager.Instance != null)
+            var status = TagGameManager.Instance;
+            if (status != null)
             {
-                TagGameManager.Instance.OnCountdownChanged -= HandleCountdownChanged;
-                TagGameManager.Instance.OnGameActiveChanged -= HandleGameActiveChanged;
-                TagGameManager.Instance.OnTaggerChanged -= HandleTaggerChanged;
+                status.OnCountdownChanged -= HandleCountdownChanged;
+                status.OnGameActiveChanged -= HandleGameActiveChanged;
+                status.OnTaggerChanged -= HandleTaggerChanged;
+                status.OnMatchTimerChanged -= HandleMatchTimerChanged;
             }
         }
 
         private void HandleCountdownChanged(float time) => RefreshUI();
         private void HandleGameActiveChanged(bool active) => RefreshUI();
         private void HandleTaggerChanged(ulong id) => RefreshUI();
+        private void HandleMatchTimerChanged(float time) => UpdateTimerUI(time);
+
+        private void UpdateTimerUI(float time)
+        {
+            if (uiTimerText != null)
+            {
+                uiTimerText.text = $"TIME: {Mathf.CeilToInt(time)}s";
+            }
+        }
 
         private void RefreshUI()
         {
-            var manager = TagGameManager.Instance;
-            if (uiStatusText == null || manager == null) return;
+            var status = TagGameManager.Instance;
+            if (uiStatusText == null || status == null) return;
 
-            if (!manager.IsGameActive)
+            if (!status.IsGameActive)
             {
-                uiStatusText.text = manager.CurrentCountdown > 0 
-                    ? $"STARTING IN: {Mathf.CeilToInt(manager.CurrentCountdown)}" 
-                    : "WAITING FOR PLAYERS";
+                if (status.MatchTimer <= 0 && status.CurrentCountdown <= 0)
+                {
+                    uiStatusText.text = "GAME OVER!";
+                }
+                else
+                {
+                    uiStatusText.text = status.CurrentCountdown > 0 
+                        ? $"STARTING IN: {Mathf.CeilToInt(status.CurrentCountdown)}" 
+                        : "WAITING FOR PLAYERS";
+                }
             }
             else
             {
-                uiStatusText.text = manager.IsLocalPlayerTagger ? "YOU ARE IT! TAG SOMEONE!" : "RUN!";
+                uiStatusText.text = status.IsLocalPlayerTagger ? "YOU ARE IT! TAG SOMEONE!" : "RUN!";
             }
         }
     }
