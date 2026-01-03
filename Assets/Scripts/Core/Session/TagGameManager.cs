@@ -13,7 +13,7 @@ namespace Core.Session
         public static ITagGameStatus Instance { get; private set; }
 
         private NetworkVariable<float> _countdownTime = new NetworkVariable<float>(3f);
-        private NetworkVariable<float> _matchTimer = new NetworkVariable<float>(60f);
+        private NetworkVariable<float> _matchTimer = new NetworkVariable<float>(20f);
         private NetworkVariable<bool> _gameActive = new NetworkVariable<bool>(false);
         private NetworkVariable<ulong> _taggerId = new NetworkVariable<ulong>();
         private NetworkVariable<bool> _isTagCooldownActive = new NetworkVariable<bool>(false);

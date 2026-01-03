@@ -1,19 +1,28 @@
 using Core.Player;
 using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Core.Session
 {
-    public class MultiplayerSession : NetworkBehaviour
+    public class MultiplayerSession : NetworkBehaviour, IMultiplayerSession
     {
         [SerializeField] private PlayerSpawnManager playerSpawnManager;
+        
+        public static IMultiplayerSession Instance { get; private set; }
+
+        private void Awake()
+        {
+            Instance = this;
+        }
 
         public override void OnNetworkSpawn()
         {
+            NetworkManager.Singleton.OnClientDisconnectCallback += OnDisconnect;
+
             if (IsServer)
             {
                 NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
-                NetworkManager.Singleton.OnClientDisconnectCallback += OnClientDisconnected;
 
                 if (NetworkManager.Singleton.IsServer)
                 {
@@ -24,10 +33,16 @@ namespace Core.Session
 
         public override void OnNetworkDespawn()
         {
-            if (IsServer && NetworkManager.Singleton != null)
+            if (Instance == (IMultiplayerSession)this) Instance = null;
+
+            if (NetworkManager.Singleton != null)
             {
-                NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
-                NetworkManager.Singleton.OnClientDisconnectCallback -= OnClientDisconnected;
+                NetworkManager.Singleton.OnClientDisconnectCallback -= OnDisconnect;
+                
+                if (IsServer)
+                {
+                    NetworkManager.Singleton.OnClientConnectedCallback -= OnClientConnected;
+                }
             }
         }
 
@@ -36,9 +51,21 @@ namespace Core.Session
             playerSpawnManager.SpawnPlayer(clientId);
         }
 
-        private void OnClientDisconnected(ulong clientId)
+        private void OnDisconnect(ulong clientId)
         {
-            playerSpawnManager.DespawnPlayer((int)clientId);
+            if (clientId == NetworkManager.ServerClientId || clientId == NetworkManager.Singleton.LocalClientId)
+            {
+                LeaveSession();
+            }
+        }
+
+        public void LeaveSession()
+        {
+            if (NetworkManager.Singleton != null)
+            {
+                NetworkManager.Singleton.Shutdown();
+            }
+            SceneManager.LoadScene("Menu_Scene");
         }
     }
 }
