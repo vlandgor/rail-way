@@ -109,20 +109,11 @@ namespace Core.Player
             _activeMoveRoutine = null;
         }
 
-        private void OnTriggerEnter(Collider other)
+        public void HandleCollisionTurnAround()
         {
-            if (!IsOwner || !IsMoving) return;
             if (Time.time < _lastCollisionTime + 0.2f) return;
+            _lastCollisionTime = Time.time;
 
-            if (other.CompareTag("Player"))
-            {
-                _lastCollisionTime = Time.time;
-                HandleTurnAround();
-            }
-        }
-
-        private void HandleTurnAround()
-        {
             if (_activeMoveRoutine != null)
             {
                 StopCoroutine(_activeMoveRoutine);
