@@ -22,19 +22,13 @@ namespace Core.Player
         {
             if (_cameraObject != null)
             {
-                Debug.Log("Camera Object is " + _cameraObject);
                 _cameraObject.SetActive(IsOwner);
-            }
-
-            if (!IsOwner)
-            {
-                enabled = false;
             }
         }
 
         private void Update()
         {
-            if (!IsOwner || !_input.HasInput)
+            if (!IsOwner || _input == null || !_input.HasInput)
                 return;
 
             _mover.TryMove(_input.MoveDirection);
