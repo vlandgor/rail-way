@@ -12,6 +12,8 @@ namespace Core.Session
     {
         public static ITagGameStatus Instance { get; private set; }
 
+        [SerializeField] private float _totalMatchDuration = 20f;
+
         private NetworkVariable<float> _countdownTime = new NetworkVariable<float>(3f);
         private NetworkVariable<float> _matchTimer = new NetworkVariable<float>(20f);
         private NetworkVariable<bool> _gameActive = new NetworkVariable<bool>(false);
@@ -128,8 +130,8 @@ namespace Core.Session
 
             int randomIndex = UnityEngine.Random.Range(0, NetworkManager.Singleton.ConnectedClientsList.Count);
             _taggerId.Value = NetworkManager.Singleton.ConnectedClientsList[randomIndex].ClientId;
+            _matchTimer.Value = _totalMatchDuration;
             _gameActive.Value = true;
-            _matchTimer.Value = 60f;
         }
 
         public void ReportTag(ulong newTaggerId)
