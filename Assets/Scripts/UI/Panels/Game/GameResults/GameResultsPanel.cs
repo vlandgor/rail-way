@@ -1,9 +1,9 @@
+using Core.Session;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
-using Core.Session;
 
-namespace UI.Panels.GameResults
+namespace UI.Panels.Game.GameResults
 {
     public class GameResultsPanel : MonoBehaviour
     {

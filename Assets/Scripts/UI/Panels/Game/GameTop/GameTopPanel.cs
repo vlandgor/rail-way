@@ -1,8 +1,8 @@
+using Core.Session;
 using TMPro;
 using UnityEngine;
-using Core.Session;
 
-namespace UI.Panels.GameTop
+namespace UI.Panels.Game.GameTop
 {
     public class GameTopPanel : MonoBehaviour
     {

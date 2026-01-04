@@ -2,7 +2,7 @@ using Services.Matchmaking;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace UI.Panels.Home
+namespace UI.Panels.Menu.Home
 {
     public class HomePanel : MonoBehaviour
     {
