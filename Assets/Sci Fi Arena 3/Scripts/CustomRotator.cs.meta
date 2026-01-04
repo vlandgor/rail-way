@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 05d9c44cbd9f43d43a5e1ff66a5dd693
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 320338
+  packageName: Sci-Fi Battle Arena - Blue Base
+  packageVersion: 1.0
+  assetPath: Assets/Sci Fi Arena 3/Scripts/CustomRotator.cs
+  uploadId: 759938
