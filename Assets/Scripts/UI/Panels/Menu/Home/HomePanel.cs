@@ -1,10 +1,11 @@
 using Services.Matchmaking;
+using UI.Base;
 using UnityEngine;
 using UnityEngine.UI;
 
 namespace UI.Panels.Menu.Home
 {
-    public class HomePanel : MonoBehaviour
+    public class HomePanel : BasePanel
     {
         [SerializeField] private Button _playButton;
 
