@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using Services.Loading;
+using Services.Utilities;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Lobbies;
@@ -9,10 +11,8 @@ using UnityEngine.SceneManagement;
 
 namespace Services.Matchmaking
 {
-    public class MatchmakingService : MonoBehaviour
+    public class MatchmakingService : Singleton<MatchmakingService>
     {
-        public static MatchmakingService Instance { get; private set; }
-
         private Lobby _currentLobby;
         private float _heartbeatTimer;
 
@@ -24,18 +24,6 @@ namespace Services.Matchmaking
         public bool IsHostPlayer =>
             _currentLobby != null &&
             _currentLobby.HostId == AuthenticationService.Instance.PlayerId;
-
-        private void Awake()
-        {
-            if (Instance != null)
-            {
-                Destroy(gameObject);
-                return;
-            }
-
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
 
         private void Update()
         {
@@ -109,7 +97,7 @@ namespace Services.Matchmaking
                         _currentLobby.Data.TryGetValue("state", out var state) &&
                         state.Value == "starting")
                     {
-                        SceneManager.LoadScene("Game_Scene");
+                        LoadingService.Instance.LoadScene("Game_Scene");
                         break;
                     }
                 }
