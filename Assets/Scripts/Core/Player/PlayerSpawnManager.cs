@@ -7,8 +7,8 @@ namespace Core.Player
 {
     public class PlayerSpawnManager : MonoBehaviour
     {
-        [Header("Dependencies")]
-        [SerializeField] private RailSpawnPoints spawnPoints;
+        [Header("Dependencies")] 
+        [SerializeField] private RailSplineMap _railSplineMap;
         [SerializeField] private RailMover playerPrefab;
 
         private readonly Dictionary<int, RailMover> _players = new();
@@ -17,25 +17,14 @@ namespace Core.Player
         {
             if (_players.ContainsKey((int)clientId)) return;
 
-            // Get a unique node for this client
-            RailNode spawnNode = spawnPoints.GetSpawnNode((int)clientId);
-            if (spawnNode == null) 
-            {
-                Debug.LogError($"[SpawnManager] No spawn node found for client {clientId}");
-                return;
-            }
+            int spawnNodeId = (int)clientId % _railSplineMap.RuntimeNodes.Count;
 
             RailMover player = Instantiate(playerPrefab);
-            
-            // 1. SET THE DATA FIRST
-            player.SetStartNode(spawnNode);
+            player.SetStartNode(spawnNodeId);
 
-            // 2. THEN SPAWN ON NETWORK
             NetworkObject netObj = player.GetComponent<NetworkObject>();
             netObj.SpawnAsPlayerObject(clientId);
-
             _players.Add((int)clientId, player);
-            Debug.Log($"[SpawnManager] Spawned Client {clientId} at Node {spawnNode.Id}");
         }
 
         public void DespawnPlayer(int playerId)

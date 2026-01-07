@@ -8,7 +8,7 @@ namespace Core.Session
 {
     public class SessionBootstrap : MonoBehaviour
     {
-        [SerializeField] private Rail.RailGraphBuilder railGraphBuilder;
+        [SerializeField] private Rail.RailSplineMap railSplineMap;
 
         private async void Start()
         {
@@ -25,25 +25,14 @@ namespace Core.Session
                 return;
             }
 
-            Debug.Log($"RailGraphBuilder is null: {railGraphBuilder == null}");
-
-            // 🔁 Wait for lobby + seed to be available
-            var lobby = await WaitForSeed(matchmaking);
+            var lobby = await WaitForLobbyData(matchmaking);
 
             if (lobby == null)
             {
-                Debug.LogError("Failed to retrieve lobby seed.");
+                Debug.LogError("Failed to retrieve lobby data.");
                 return;
             }
 
-            int seed = int.Parse(lobby.Data["seed"].Value);
-            Debug.Log($"Game seed received: {seed}");
-
-            // 1️⃣ Build deterministic level
-            railGraphBuilder.SetSeed(seed);
-            railGraphBuilder.Build();
-
-            // 2️⃣ Start networking
             if (matchmaking.IsHostPlayer)
             {
                 Debug.Log("Starting as Host");
@@ -56,7 +45,7 @@ namespace Core.Session
             }
         }
 
-        private async Task<Unity.Services.Lobbies.Models.Lobby> WaitForSeed(
+        private async Task<Unity.Services.Lobbies.Models.Lobby> WaitForLobbyData(
             MatchmakingService matchmaking)
         {
             const int maxAttempts = 20;
@@ -66,18 +55,9 @@ namespace Core.Session
             {
                 var lobby = matchmaking.CurrentLobby;
 
-                if (lobby != null &&
-                    lobby.Data != null &&
-                    lobby.Data.TryGetValue("seed", out var seedData))
-                {
-                    return lobby;
-                }
-
-                // 🔄 Re-fetch lobby to get latest data
                 if (lobby != null)
                 {
-                    matchmaking.RefreshLobby(
-                        await LobbyService.Instance.GetLobbyAsync(lobby.Id));
+                    return lobby;
                 }
 
                 await Task.Delay(delayMs);

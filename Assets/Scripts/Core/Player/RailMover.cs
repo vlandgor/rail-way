@@ -11,94 +11,83 @@ namespace Core.Player
         [SerializeField] private float rotationSpeed = 12f;
 
         private readonly NetworkVariable<int> _currentNodeId = new NetworkVariable<int>(-1);
-
+        
+        private KnotNode _currentNode;
+        private KnotNode _originNode; 
+        private RailSplineMap _map;
         private Coroutine _activeMoveRoutine;
-        private RailNode _originNode; 
         private float _lastCollisionTime;
 
-        public RailNode CurrentNode { get; private set; }
         public bool IsMoving { get; private set; }
 
         public override void OnNetworkSpawn()
         {
+            _map = Object.FindFirstObjectByType<RailSplineMap>();
+
             if (_currentNodeId.Value != -1)
             {
-                StartCoroutine(WaitAndSyncNode(_currentNodeId.Value));
+                SyncNode(_currentNodeId.Value);
             }
 
             _currentNodeId.OnValueChanged += (oldVal, newVal) => 
             {
-                if (!IsOwner) StartCoroutine(WaitAndSyncNode(newVal));
+                SyncNode(newVal);
             };
         }
 
-        private IEnumerator WaitAndSyncNode(int id)
+        private void SyncNode(int id)
         {
-            RailGraphBuilder builder = null;
-            int attempts = 0;
+            if (_map == null || !_map.RuntimeNodes.TryGetValue(id, out var node)) return;
 
-            while (builder == null || builder.RuntimeNodes == null || !builder.RuntimeNodes.ContainsKey(id))
-            {
-                builder = Object.FindFirstObjectByType<RailGraphBuilder>();
-                attempts++;
-                if(attempts > 100) yield break;
-                yield return null; 
-            }
-
-            CurrentNode = builder.RuntimeNodes[id];
+            _currentNode = node;
             
             if (!IsMoving)
             {
-                transform.position = CurrentNode.Position;
+                transform.position = node.Position;
             }
         }
 
-        public void SetStartNode(RailNode node)
+        public void SetStartNode(int nodeId)
         {
-            _currentNodeId.Value = node.Id;
-            CurrentNode = node;
-            transform.position = node.Position;
+            _currentNodeId.Value = nodeId;
         }
 
         public bool TryMove(Vector2Int inputDir)
         {
-            if (IsMoving || CurrentNode == null) return false;
+            if (IsMoving || _currentNode == null) return false;
 
-            RailNode target = GetTargetNodeRelative(inputDir);
-            if (target == null) return false;
+            int targetId = GetTargetId(inputDir);
+            if (targetId == -1) return false;
 
-            _originNode = CurrentNode; 
-            _activeMoveRoutine = StartCoroutine(MoveRoutine(target));
+            _originNode = _currentNode; 
+            _activeMoveRoutine = StartCoroutine(MoveRoutine(_map.RuntimeNodes[targetId]));
             return true;
         }
 
-        private IEnumerator MoveRoutine(RailNode target)
+        private IEnumerator MoveRoutine(KnotNode target)
         {
             IsMoving = true;
 
             Vector3 startPos = transform.position;
             Vector3 endPos = target.Position;
-            Vector3 moveDir = (endPos - startPos).normalized;
             
             float distance = Vector3.Distance(startPos, endPos);
             
-            Quaternion targetRot = moveDir != Vector3.zero ? 
-                Quaternion.LookRotation(moveDir, Vector3.up) : transform.rotation;
-
-            float progress = 0f;
-            while (progress < distance)
+            while (Vector3.Distance(transform.position, endPos) > 0.01f)
             {
-                progress += Time.deltaTime * moveSpeed;
-                float t = progress / distance;
-
-                transform.position = Vector3.Lerp(startPos, endPos, t);
-                transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, t * rotationSpeed);
+                transform.position = Vector3.MoveTowards(transform.position, endPos, moveSpeed * Time.deltaTime);
+                
+                Vector3 moveDir = (endPos - transform.position).normalized;
+                if (moveDir != Vector3.zero)
+                {
+                    Quaternion targetRot = Quaternion.LookRotation(moveDir, Vector3.up);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotationSpeed * Time.deltaTime);
+                }
                 yield return null;
             }
 
             transform.position = endPos;
-            transform.rotation = targetRot;
-            CurrentNode = target;
+            _currentNode = target;
 
             if (IsOwner)
             {
@@ -129,52 +118,30 @@ namespace Core.Player
             }
         }
 
-        private RailNode GetTargetNodeRelative(Vector2Int inputDir)
+        private int GetTargetId(Vector2Int inputDir)
         {
-            if (inputDir == Vector2Int.zero) return null;
-            
-            Vector3 lookDir = transform.forward;
-            Vector3 rightDir = transform.right;
-
-            Vector3 worldDir = (lookDir * inputDir.y) + (rightDir * inputDir.x);
-            worldDir.Normalize();
-
-            return GetNodeByWorldDirection(worldDir, inputDir.y > 0);
-        }
-
-        private RailNode GetNodeByWorldDirection(Vector3 worldDir, bool isAttemptingForward)
-        {
-            if (isAttemptingForward && !HasSideConnections())
-            {
-                return null;
-            }
-
+            Vector3 worldDir = (transform.forward * inputDir.y + transform.right * inputDir.x).normalized;
             float bestDot = 0.5f;
-            RailNode bestNode = null;
+            int bestId = -1;
 
-            TryCandidate(CurrentNode.Forward);
-            TryCandidate(CurrentNode.Backward);
-            TryCandidate(CurrentNode.Left);
-            TryCandidate(CurrentNode.Right);
+            CheckCandidate(_currentNode.ForwardId);
+            CheckCandidate(_currentNode.BackwardId);
+            CheckCandidate(_currentNode.LeftId);
+            CheckCandidate(_currentNode.RightId);
 
-            return bestNode;
+            return bestId;
 
-            void TryCandidate(RailNode node)
+            void CheckCandidate(int id)
             {
-                if (node == null) return;
-                Vector3 dirToNode = (node.Position - CurrentNode.Position).normalized;
-                float dot = Vector3.Dot(worldDir, dirToNode);
+                if (id == -1) return;
+                Vector3 toNode = (_map.RuntimeNodes[id].Position - _currentNode.Position).normalized;
+                float dot = Vector3.Dot(worldDir, toNode);
                 if (dot > bestDot)
                 {
                     bestDot = dot;
-                    bestNode = node;
+                    bestId = id;
                 }
             }
-        }
-
-        private bool HasSideConnections()
-        {
-            return CurrentNode.Left != null || CurrentNode.Right != null;
         }
 
         [ServerRpc]
