@@ -3,6 +3,7 @@ using Cysharp.Threading.Tasks;
 using Core.Rail;
 using UnityEngine;
 using System.Threading;
+using UnityEngine.Splines;
 
 namespace Core.Player
 {
@@ -17,6 +18,9 @@ namespace Core.Player
 
         private CancellationTokenSource _moveCts;
         private float _lastCollisionTime;
+
+        private RailSegment _activeSegment;
+        private float _currentT;
 
         public bool IsMoving { get; private set; }
 
@@ -33,9 +37,7 @@ namespace Core.Player
             _currentNode = node;
 
             if (!IsMoving)
-            {
                 transform.position = node.Position;
-            }
         }
 
         public bool TryMove(Vector2Int inputDir, out int targetNodeId)
@@ -50,40 +52,55 @@ namespace Core.Player
                 return false;
 
             _originNode = _currentNode;
-            StartMove(_map.RuntimeNodes[targetNodeId]).Forget();
+            KnotNode target = _map.RuntimeNodes[targetNodeId];
+
+            _activeSegment = _map.GetSegment(_currentNode, target);
+            StartMoveAlongSpline(_activeSegment).Forget();
+
+            _currentNode = target;
             return true;
         }
 
-        private async UniTaskVoid StartMove(KnotNode target)
+        private async UniTaskVoid StartMoveAlongSpline(RailSegment segment)
         {
             CancelMove();
 
             _moveCts = new CancellationTokenSource();
-            CancellationToken token = _moveCts.Token;
+            var token = _moveCts.Token;
 
             IsMoving = true;
 
-            Vector3 endPos = target.Position;
+            _currentT = segment.StartT;
+            float dir = Mathf.Sign(segment.EndT - segment.StartT);
 
             try
             {
-                while (Vector3.Distance(transform.position, endPos) > 0.01f)
+                while ((dir > 0 && _currentT < segment.EndT) ||
+                       (dir < 0 && _currentT > segment.EndT))
                 {
                     token.ThrowIfCancellationRequested();
 
-                    transform.position = Vector3.MoveTowards(
-                        transform.position,
-                        endPos,
-                        moveSpeed * Time.deltaTime
+                    float delta =
+                        moveSpeed * Time.deltaTime / segment.Spline.GetLength();
+
+                    _currentT += dir * delta;
+                    _currentT = Mathf.Clamp(
+                        _currentT,
+                        Mathf.Min(segment.StartT, segment.EndT),
+                        Mathf.Max(segment.StartT, segment.EndT)
                     );
 
-                    Vector3 moveDir = (endPos - transform.position).normalized;
-                    if (moveDir != Vector3.zero)
+                    Vector3 pos = segment.Spline.EvaluatePosition(_currentT);
+                    Vector3 tangent = ((Vector3)segment.Spline.EvaluateTangent(_currentT)).normalized;
+
+                    transform.position = pos;
+
+                    if (tangent != Vector3.zero)
                     {
-                        Quaternion targetRot = Quaternion.LookRotation(moveDir, Vector3.up);
+                        Quaternion rot = Quaternion.LookRotation(tangent, Vector3.up);
                         transform.rotation = Quaternion.Slerp(
                             transform.rotation,
-                            targetRot,
+                            rot,
                             rotationSpeed * Time.deltaTime
                         );
                     }
@@ -91,13 +108,9 @@ namespace Core.Player
                     await UniTask.Yield(PlayerLoopTiming.Update, token);
                 }
 
-                transform.position = endPos;
-                _currentNode = target;
+                transform.position = segment.Spline.EvaluatePosition(segment.EndT);
             }
-            catch (OperationCanceledException)
-            {
-                // expected on collision or reversal
-            }
+            catch (OperationCanceledException) { }
             finally
             {
                 IsMoving = false;
@@ -115,7 +128,8 @@ namespace Core.Player
 
             if (_originNode != null)
             {
-                StartMove(_originNode).Forget();
+                var reverse = _map.GetSegment(_currentNode, _originNode);
+                StartMoveAlongSpline(reverse).Forget();
             }
             else
             {
@@ -125,10 +139,7 @@ namespace Core.Player
 
         private void CancelMove()
         {
-            if (_moveCts == null)
-                return;
-
-            _moveCts.Cancel();
+            _moveCts?.Cancel();
         }
 
         private int GetTargetId(Vector2Int inputDir)
@@ -139,22 +150,21 @@ namespace Core.Player
             float bestDot = 0.5f;
             int bestId = -1;
 
-            CheckCandidate(_currentNode.ForwardId);
-            CheckCandidate(_currentNode.BackwardId);
-            CheckCandidate(_currentNode.LeftId);
-            CheckCandidate(_currentNode.RightId);
+            Check(_currentNode.ForwardId);
+            Check(_currentNode.BackwardId);
+            Check(_currentNode.LeftId);
+            Check(_currentNode.RightId);
 
             return bestId;
 
-            void CheckCandidate(int id)
+            void Check(int id)
             {
-                if (id == -1)
-                    return;
+                if (id == -1) return;
 
-                Vector3 toNode =
+                Vector3 to =
                     (_map.RuntimeNodes[id].Position - _currentNode.Position).normalized;
 
-                float dot = Vector3.Dot(worldDir, toNode);
+                float dot = Vector3.Dot(worldDir, to);
                 if (dot > bestDot)
                 {
                     bestDot = dot;
