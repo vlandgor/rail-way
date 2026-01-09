@@ -1,41 +1,57 @@
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 using Core.Rail;
-using Unity.Netcode;
 
 namespace Core.Player
 {
     public class PlayerSpawnManager : MonoBehaviour
     {
-        [Header("Dependencies")] 
+        [Header("Dependencies")]
         [SerializeField] private RailSplineMap _railSplineMap;
-        [SerializeField] private RailMover playerPrefab;
+        [SerializeField] private PlayerController playerPrefab;
 
-        private readonly Dictionary<int, RailMover> _players = new();
+        private readonly Dictionary<ulong, PlayerController> _players = new();
 
         public void SpawnPlayer(ulong clientId)
         {
-            if (_players.ContainsKey((int)clientId)) return;
+            if (!NetworkManager.Singleton.IsServer)
+                return;
 
-            int spawnNodeId = (int)clientId % _railSplineMap.RuntimeNodes.Count;
+            if (_players.ContainsKey(clientId))
+                return;
 
-            RailMover player = Instantiate(playerPrefab);
-            player.SetStartNode(spawnNodeId);
+            int spawnNodeId = (int)(clientId % (ulong)_railSplineMap.RuntimeNodes.Count);
+
+            PlayerController player = Instantiate(playerPrefab);
 
             NetworkObject netObj = player.GetComponent<NetworkObject>();
             netObj.SpawnAsPlayerObject(clientId);
-            _players.Add((int)clientId, player);
+            player.SetStartNode(spawnNodeId);
+
+            _players.Add(clientId, player);
         }
 
-        public void DespawnPlayer(int playerId)
+        public void DespawnPlayer(ulong clientId)
         {
-            if (!_players.TryGetValue(playerId, out RailMover player)) return;
+            if (!NetworkManager.Singleton.IsServer)
+                return;
+
+            if (!_players.TryGetValue(clientId, out PlayerController player))
+                return;
 
             NetworkObject netObj = player.GetComponent<NetworkObject>();
-            if (netObj != null && netObj.IsSpawned) netObj.Despawn();
-            else Destroy(player.gameObject);
 
-            _players.Remove(playerId);
+            if (netObj != null && netObj.IsSpawned)
+            {
+                netObj.Despawn();
+            }
+            else
+            {
+                Destroy(player.gameObject);
+            }
+
+            _players.Remove(clientId);
         }
     }
 }

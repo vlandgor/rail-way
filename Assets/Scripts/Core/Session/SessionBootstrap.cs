@@ -1,7 +1,8 @@
 using System.Threading.Tasks;
+using Cysharp.Threading.Tasks;
 using Services.Matchmaking;
 using Unity.Netcode;
-using Unity.Services.Lobbies;
+using Unity.Services.Lobbies.Models;
 using UnityEngine;
 
 namespace Core.Session
@@ -15,7 +16,7 @@ namespace Core.Session
             await InitializeSession();
         }
 
-        private async Task InitializeSession()
+        private async UniTask InitializeSession()
         {
             var matchmaking = MatchmakingService.Instance;
 
@@ -25,11 +26,12 @@ namespace Core.Session
                 return;
             }
 
-            var lobby = await WaitForLobbyData(matchmaking);
+            Lobby lobby = await WaitForLobbyData(matchmaking);
 
             if (lobby == null)
             {
                 Debug.LogError("Failed to retrieve lobby data.");
+                NetworkManager.Singleton.StartHost();
                 return;
             }
 
@@ -45,15 +47,14 @@ namespace Core.Session
             }
         }
 
-        private async Task<Unity.Services.Lobbies.Models.Lobby> WaitForLobbyData(
-            MatchmakingService matchmaking)
+        private async UniTask<Lobby> WaitForLobbyData(MatchmakingService matchmaking)
         {
             const int maxAttempts = 20;
             const int delayMs = 250;
 
             for (int i = 0; i < maxAttempts; i++)
             {
-                var lobby = matchmaking.CurrentLobby;
+                Lobby lobby = matchmaking.CurrentLobby;
 
                 if (lobby != null)
                 {

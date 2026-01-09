@@ -128,7 +128,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 207d0977dd01447882a0b4f9e55f92e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ShowTopMostFoldoutHeaderGroup: 1
   moveSpeed: 5
   rotationSpeed: 0.5
 --- !u!114 &6585406032154538750
@@ -144,6 +143,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ShowTopMostFoldoutHeaderGroup: 1
+  _input: {fileID: 4257738331993294855}
+  _mover: {fileID: 6052877863131944494}
   _cameraObject: {fileID: 7389508775418420919}
   _meshRenderer: {fileID: 8690548336601559552}
 --- !u!114 &4292260217140450282

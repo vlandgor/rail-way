@@ -1,126 +1,141 @@
-using System.Collections;
+using System;
+using Cysharp.Threading.Tasks;
 using Core.Rail;
-using Unity.Netcode;
 using UnityEngine;
+using System.Threading;
 
 namespace Core.Player
 {
-    public class RailMover : NetworkBehaviour
+    public class RailMover : MonoBehaviour
     {
         [SerializeField] private float moveSpeed = 5f;
         [SerializeField] private float rotationSpeed = 12f;
 
-        private readonly NetworkVariable<int> _currentNodeId = new NetworkVariable<int>(-1);
-        
         private KnotNode _currentNode;
-        private KnotNode _originNode; 
+        private KnotNode _originNode;
         private RailSplineMap _map;
-        private Coroutine _activeMoveRoutine;
+
+        private CancellationTokenSource _moveCts;
         private float _lastCollisionTime;
 
         public bool IsMoving { get; private set; }
 
-        public override void OnNetworkSpawn()
+        private void Awake()
         {
-            _map = Object.FindFirstObjectByType<RailSplineMap>();
-
-            if (_currentNodeId.Value != -1)
-            {
-                SyncNode(_currentNodeId.Value);
-            }
-
-            _currentNodeId.OnValueChanged += (oldVal, newVal) => 
-            {
-                SyncNode(newVal);
-            };
+            _map = FindFirstObjectByType<RailSplineMap>();
         }
 
-        private void SyncNode(int id)
+        public void SyncNode(int nodeId)
         {
-            if (_map == null || !_map.RuntimeNodes.TryGetValue(id, out var node)) return;
+            if (_map == null || !_map.RuntimeNodes.TryGetValue(nodeId, out var node))
+                return;
 
             _currentNode = node;
-            
+
             if (!IsMoving)
             {
                 transform.position = node.Position;
             }
         }
 
-        public void SetStartNode(int nodeId)
+        public bool TryMove(Vector2Int inputDir, out int targetNodeId)
         {
-            _currentNodeId.Value = nodeId;
-        }
+            targetNodeId = -1;
 
-        public bool TryMove(Vector2Int inputDir)
-        {
-            if (IsMoving || _currentNode == null) return false;
+            if (IsMoving || _currentNode == null)
+                return false;
 
-            int targetId = GetTargetId(inputDir);
-            if (targetId == -1) return false;
+            targetNodeId = GetTargetId(inputDir);
+            if (targetNodeId == -1)
+                return false;
 
-            _originNode = _currentNode; 
-            _activeMoveRoutine = StartCoroutine(MoveRoutine(_map.RuntimeNodes[targetId]));
+            _originNode = _currentNode;
+            StartMove(_map.RuntimeNodes[targetNodeId]).Forget();
             return true;
         }
 
-        private IEnumerator MoveRoutine(KnotNode target)
+        private async UniTaskVoid StartMove(KnotNode target)
         {
+            CancelMove();
+
+            _moveCts = new CancellationTokenSource();
+            CancellationToken token = _moveCts.Token;
+
             IsMoving = true;
 
-            Vector3 startPos = transform.position;
             Vector3 endPos = target.Position;
-            
-            float distance = Vector3.Distance(startPos, endPos);
-            
-            while (Vector3.Distance(transform.position, endPos) > 0.01f)
+
+            try
             {
-                transform.position = Vector3.MoveTowards(transform.position, endPos, moveSpeed * Time.deltaTime);
-                
-                Vector3 moveDir = (endPos - transform.position).normalized;
-                if (moveDir != Vector3.zero)
+                while (Vector3.Distance(transform.position, endPos) > 0.01f)
                 {
-                    Quaternion targetRot = Quaternion.LookRotation(moveDir, Vector3.up);
-                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotationSpeed * Time.deltaTime);
+                    token.ThrowIfCancellationRequested();
+
+                    transform.position = Vector3.MoveTowards(
+                        transform.position,
+                        endPos,
+                        moveSpeed * Time.deltaTime
+                    );
+
+                    Vector3 moveDir = (endPos - transform.position).normalized;
+                    if (moveDir != Vector3.zero)
+                    {
+                        Quaternion targetRot = Quaternion.LookRotation(moveDir, Vector3.up);
+                        transform.rotation = Quaternion.Slerp(
+                            transform.rotation,
+                            targetRot,
+                            rotationSpeed * Time.deltaTime
+                        );
+                    }
+
+                    await UniTask.Yield(PlayerLoopTiming.Update, token);
                 }
-                yield return null;
+
+                transform.position = endPos;
+                _currentNode = target;
             }
-
-            transform.position = endPos;
-            _currentNode = target;
-
-            if (IsOwner)
+            catch (OperationCanceledException)
             {
-                UpdateNodeServerRpc(target.Id);
+                // expected on collision or reversal
             }
-
-            IsMoving = false;
-            _activeMoveRoutine = null;
+            finally
+            {
+                IsMoving = false;
+                _moveCts?.Dispose();
+                _moveCts = null;
+            }
         }
 
         public void HandleCollisionTurnAround()
         {
-            if (Time.time < _lastCollisionTime + 0.2f) return;
-            _lastCollisionTime = Time.time;
+            if (Time.time < _lastCollisionTime + 0.2f)
+                return;
 
-            if (_activeMoveRoutine != null)
-            {
-                StopCoroutine(_activeMoveRoutine);
-            }
+            _lastCollisionTime = Time.time;
 
             if (_originNode != null)
             {
-                _activeMoveRoutine = StartCoroutine(MoveRoutine(_originNode));
+                StartMove(_originNode).Forget();
             }
             else
             {
-                IsMoving = false;
+                CancelMove();
             }
+        }
+
+        private void CancelMove()
+        {
+            if (_moveCts == null)
+                return;
+
+            _moveCts.Cancel();
         }
 
         private int GetTargetId(Vector2Int inputDir)
         {
-            Vector3 worldDir = (transform.forward * inputDir.y + transform.right * inputDir.x).normalized;
+            Vector3 worldDir =
+                (transform.forward * inputDir.y + transform.right * inputDir.x).normalized;
+
             float bestDot = 0.5f;
             int bestId = -1;
 
@@ -133,8 +148,12 @@ namespace Core.Player
 
             void CheckCandidate(int id)
             {
-                if (id == -1) return;
-                Vector3 toNode = (_map.RuntimeNodes[id].Position - _currentNode.Position).normalized;
+                if (id == -1)
+                    return;
+
+                Vector3 toNode =
+                    (_map.RuntimeNodes[id].Position - _currentNode.Position).normalized;
+
                 float dot = Vector3.Dot(worldDir, toNode);
                 if (dot > bestDot)
                 {
@@ -142,12 +161,6 @@ namespace Core.Player
                     bestId = id;
                 }
             }
-        }
-
-        [ServerRpc]
-        private void UpdateNodeServerRpc(int newNodeId)
-        {
-            _currentNodeId.Value = newNodeId;
         }
     }
 }
