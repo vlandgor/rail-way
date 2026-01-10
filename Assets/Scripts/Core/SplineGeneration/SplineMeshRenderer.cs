@@ -52,7 +52,7 @@ namespace Core.SplineGeneration
                 GenerateSegmentMesh(spline, verts, tris, uvs, resolutionPerSpline);
             }
 
-            GenerateProximityIntersections(verts, tris, uvs);
+            GenerateLinkedIntersections(verts, tris, uvs);
 
             _generatedMesh.Clear();
             _generatedMesh.SetVertices(verts);
@@ -76,67 +76,85 @@ namespace Core.SplineGeneration
             }
         }
 
-        private void GenerateProximityIntersections(List<Vector3> verts, List<int> tris, List<Vector2> uvs)
+        private void GenerateLinkedIntersections(List<Vector3> verts, List<int> tris, List<Vector2> uvs)
         {
             var splines = splineContainer.Splines;
+            var linkCollection = splineContainer.KnotLinkCollection;
+            if (linkCollection == null) return;
+
             HashSet<string> processedPairs = new HashSet<string>();
 
             for (int s1 = 0; s1 < splines.Count; s1++)
             {
-                for (int s2 = 0; s2 < splines.Count; s2++)
+                for (int k1 = 0; k1 < splines[s1].Count; k1++)
                 {
-                    if (s1 == s2) continue;
+                    SplineKnotIndex k1Idx = new SplineKnotIndex(s1, k1);
+                    if (!linkCollection.TryGetKnotLinks(k1Idx, out IReadOnlyList<SplineKnotIndex> linkedKnots)) 
+                        continue;
 
-                    for (int k1 = 0; k1 < splines[s1].Count; k1++)
+                    foreach (var k2Idx in linkedKnots)
                     {
-                        for (int k2 = 0; k2 < splines[s2].Count; k2++)
+                        if (k1Idx.Equals(k2Idx)) continue;
+
+                        string pairId = k1Idx.Spline < k2Idx.Spline ? 
+                            $"{k1Idx.Spline}_{k1Idx.Knot}_{k2Idx.Spline}_{k2Idx.Knot}" : 
+                            $"{k2Idx.Spline}_{k2Idx.Knot}_{k1Idx.Spline}_{k1Idx.Knot}";
+                        
+                        if (processedPairs.Contains(pairId)) continue;
+                        processedPairs.Add(pairId);
+
+                        bool isK1End = (k1Idx.Knot == 0 || k1Idx.Knot == splines[k1Idx.Spline].Count - 1);
+                        bool isK2End = (k2Idx.Knot == 0 || k2Idx.Knot == splines[k2Idx.Spline].Count - 1);
+
+                        if (isK1End && isK2End)
                         {
-                            string pairId = s1 < s2 ? $"{s1}_{k1}_{s2}_{k2}" : $"{s2}_{k2}_{s1}_{k1}";
-                            if (processedPairs.Contains(pairId)) continue;
+                            CreateFilletBetweenEndpoints(k1Idx, k2Idx, verts, tris, uvs);
+                        }
+                        else if (!isK1End && !isK2End)
+                        {
+                            CreateFilletDirected(k1Idx.Spline, k1Idx.Knot, k2Idx.Spline, k2Idx.Knot, 1f, 1f, verts, tris, uvs);
+                            CreateFilletDirected(k1Idx.Spline, k1Idx.Knot, k2Idx.Spline, k2Idx.Knot, 1f, -1f, verts, tris, uvs);
+                            CreateFilletDirected(k1Idx.Spline, k1Idx.Knot, k2Idx.Spline, k2Idx.Knot, -1f, 1f, verts, tris, uvs);
+                            CreateFilletDirected(k1Idx.Spline, k1Idx.Knot, k2Idx.Spline, k2Idx.Knot, -1f, -1f, verts, tris, uvs);
+                        }
+                        else
+                        {
+                            int mainS = isK1End ? k2Idx.Spline : k1Idx.Spline;
+                            int branchS = isK1End ? k1Idx.Spline : k2Idx.Spline;
+                            int mainK = isK1End ? k2Idx.Knot : k1Idx.Knot;
+                            int branchK = isK1End ? k1Idx.Knot : k2Idx.Knot;
 
-                            float dist = Vector3.Distance((Vector3)splines[s1][k1].Position, (Vector3)splines[s2][k2].Position);
-                            if (dist < 0.1f)
-                            {
-                                bool isK1End = (k1 == 0 || k1 == splines[s1].Count - 1);
-                                bool isK2End = (k2 == 0 || k2 == splines[s2].Count - 1);
-
-                                int mainS = isK1End && !isK2End ? s2 : s1;
-                                int branchS = mainS == s1 ? s2 : s1;
-                                int mainK = mainS == s1 ? k1 : k2;
-                                int branchK = branchS == s1 ? k1 : k2;
-
-                                CreateFilletDirected(mainS, mainK, branchS, branchK, 1f, verts, tris, uvs);
-                                CreateFilletDirected(mainS, mainK, branchS, branchK, -1f, verts, tris, uvs);
-                                
-                                processedPairs.Add(pairId);
-                            }
+                            CreateFilletDirected(mainS, mainK, branchS, branchK, 1f, 0f, verts, tris, uvs);
+                            CreateFilletDirected(mainS, mainK, branchS, branchK, -1f, 0f, verts, tris, uvs);
                         }
                     }
                 }
             }
         }
 
-        private void CreateFilletDirected(int sIdx1, int kIdx1, int sIdx2, int kIdx2, float sideSign, List<Vector3> verts, List<int> tris, List<Vector2> uvs)
+        private void CreateFilletDirected(int sMainIdx, int kMainIdx, int sBranchIdx, int kBranchIdx, float mainSide, float branchSideOverride, List<Vector3> verts, List<int> tris, List<Vector2> uvs)
         {
-            Spline sMain = splineContainer.Splines[sIdx1];
-            Spline sBranch = splineContainer.Splines[sIdx2];
+            Spline sMain = splineContainer.Splines[sMainIdx];
+            Spline sBranch = splineContainer.Splines[sBranchIdx];
 
-            float tMainCenter = (float)kIdx1 / (sMain.Count - 1);
-            float tBranchCenter = (float)kIdx2 / (sBranch.Count - 1);
+            float tMainCenter = (float)kMainIdx / (sMain.Count - 1);
+            float tBranchCenter = (float)kBranchIdx / (sBranch.Count - 1);
 
-            float tMainOffset = filletDistance / sMain.GetLength();
-            float tBranchOffset = filletDistance / sBranch.GetLength();
+            float tMainStart = Mathf.Clamp01(tMainCenter + (filletDistance / sMain.GetLength() * mainSide));
+            
+            float branchDir;
+            if (branchSideOverride != 0) branchDir = branchSideOverride;
+            else branchDir = (kBranchIdx == 0) ? 1f : -1f;
 
-            float tMainStart = Mathf.Clamp01(tMainCenter + (tMainOffset * sideSign));
-            float tBranchStart = Mathf.Clamp01(tBranchCenter + (tBranchOffset * (kIdx2 == 0 ? 1 : -1)));
+            float tBranchStart = Mathf.Clamp01(tBranchCenter + (filletDistance / sBranch.GetLength() * branchDir));
 
             sMain.Evaluate(tMainStart, out var p0, out var tan0, out var up0);
             sBranch.Evaluate(tBranchStart, out var p3, out var tan3, out var up3);
 
-            Vector3 m0 = Vector3.Normalize(tan0) * (sideSign * -filletDistance);
-            Vector3 m3 = Vector3.Normalize(tan3) * ((kIdx2 == 0 ? 1 : -1) * -filletDistance);
+            Vector3 m0 = Vector3.Normalize(tan0) * (-mainSide * filletDistance);
+            Vector3 m3 = Vector3.Normalize(tan3) * (-branchDir * filletDistance);
 
-            if (Mathf.Abs(Vector3.Dot(m0.normalized, m3.normalized)) > 0.9f) return;
+            if (Mathf.Abs(Vector3.Dot(m0.normalized, m3.normalized)) > 0.95f) return;
 
             Vector3 p1 = (Vector3)p0 + m0 * 0.5f;
             Vector3 p2 = (Vector3)p3 + m3 * 0.5f;
@@ -145,14 +163,39 @@ namespace Core.SplineGeneration
             for (int i = 0; i <= filletResolution; i++)
             {
                 float t = (float)i / filletResolution;
-                
-                Vector3 pos = GetCubicPoint((Vector3)p0, p1, p2, (Vector3)p3, t);
-                pos += (Vector3)up0 * 0.01f;
-
+                Vector3 pos = GetCubicPoint((Vector3)p0, p1, p2, (Vector3)p3, t) + (Vector3)up0 * 0.01f;
                 Vector3 tan = GetCubicTangent((Vector3)p0, p1, p2, (Vector3)p3, t);
-                Vector3 up = Vector3.Lerp(up0, up3, t);
+                AddQuadAtPoint(pos, tan, up0, t, filletDistance * 2, offset, i, filletResolution, verts, tris, uvs);
+            }
+        }
 
-                AddQuadAtPoint(pos, tan, up, t, filletDistance * 2, offset, i, filletResolution, verts, tris, uvs);
+        private void CreateFilletBetweenEndpoints(SplineKnotIndex k1, SplineKnotIndex k2, List<Vector3> verts, List<int> tris, List<Vector2> uvs)
+        {
+            Spline s1 = splineContainer.Splines[k1.Spline];
+            Spline s2 = splineContainer.Splines[k2.Spline];
+
+            float d1 = (k1.Knot == 0) ? 1f : -1f;
+            float d2 = (k2.Knot == 0) ? 1f : -1f;
+
+            float t1 = Mathf.Clamp01((float)k1.Knot / (s1.Count - 1) + (filletDistance / s1.GetLength() * d1));
+            float t2 = Mathf.Clamp01((float)k2.Knot / (s2.Count - 1) + (filletDistance / s2.GetLength() * d2));
+
+            s1.Evaluate(t1, out var p0, out var tan0, out var up0);
+            s2.Evaluate(t2, out var p3, out var tan3, out var up3);
+
+            Vector3 m0 = Vector3.Normalize(tan0) * (-d1 * filletDistance);
+            Vector3 m3 = Vector3.Normalize(tan3) * (-d2 * filletDistance);
+
+            Vector3 p1 = (Vector3)p0 + m0 * 0.5f;
+            Vector3 p2 = (Vector3)p3 + m3 * 0.5f;
+
+            int offset = verts.Count;
+            for (int i = 0; i <= filletResolution; i++)
+            {
+                float t = (float)i / filletResolution;
+                Vector3 pos = GetCubicPoint((Vector3)p0, p1, p2, (Vector3)p3, t) + (Vector3)up0 * 0.01f;
+                Vector3 tan = GetCubicTangent((Vector3)p0, p1, p2, (Vector3)p3, t);
+                AddQuadAtPoint(pos, tan, up0, t, filletDistance * 2, offset, i, filletResolution, verts, tris, uvs);
             }
         }
 
@@ -171,6 +214,7 @@ namespace Core.SplineGeneration
         private void AddQuadAtPoint(Vector3 pos, Vector3 tan, Vector3 up, float t, float len, int offset, int i, int res, List<Vector3> v, List<int> tr, List<Vector2> uv)
         {
             Vector3 fwd = Vector3.Normalize(tan);
+            if (fwd == Vector3.zero) fwd = transform.forward;
             Vector3 side = Vector3.Cross(up, fwd).normalized;
             Vector3 correctUp = Vector3.Cross(fwd, side).normalized;
 
