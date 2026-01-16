@@ -6,6 +6,8 @@ namespace Services.Loading
 {
     public class LoadingService : Singleton<LoadingService>
     {
+        [SerializeField] private LoadingCurtains _loadingCurtains;
+        
         public async void LoadScene(string sceneName)
         {
             await SceneManager.LoadSceneAsync(sceneName);
