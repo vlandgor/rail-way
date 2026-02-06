@@ -43,7 +43,7 @@ namespace Core.Rail
             Debug.Log("[RailMap] Detecting links and spline ends using KnotLinkCollection...");
             
             var linkCollection = splineContainer.KnotLinkCollection;
-            var processed = new HashSet<string>(); // Track processed knots
+            var processed = new HashSet<string>();
             
             for (int splineIndex = 0; splineIndex < splineContainer.Splines.Count; splineIndex++)
             {
@@ -65,10 +65,9 @@ namespace Core.Rail
                     // ONLY create stop point if it's a link OR a spline end
                     if (isLink || isSplineEnd)
                     {
-                        // Get world position
-                        float t = (float)knotIndex / (spline.Count - 1);
-                        spline.Evaluate(t, out float3 pos, out float3 _, out float3 _);
-                        Vector3 worldPos = splineContainer.transform.TransformPoint(pos);
+                        // Get world position from actual knot data (not interpolated)
+                        var knot = spline[knotIndex];
+                        Vector3 worldPos = splineContainer.transform.TransformPoint(knot.Position);
                         
                         // Create list of all knots at this position
                         var knotsAtStop = new List<KnotInfo>();
@@ -76,18 +75,34 @@ namespace Core.Rail
                         if (linkedKnots != null && linkedKnots.Count > 1)
                         {
                             // This is a link - add all linked knots
+                            // Use average position of all linked knots
+                            Vector3 sumPos = Vector3.zero;
+                            int count = 0;
+                            
                             foreach (var linkedKnot in linkedKnots)
                             {
+                                var linkedSpline = splineContainer.Splines[linkedKnot.Spline];
+                                var linkedKnotData = linkedSpline[linkedKnot.Knot];
+                                Vector3 linkedWorldPos = splineContainer.transform.TransformPoint(linkedKnotData.Position);
+                                
+                                sumPos += linkedWorldPos;
+                                count++;
+                                
                                 knotsAtStop.Add(new KnotInfo
                                 {
                                     SplineIndex = linkedKnot.Spline,
                                     KnotIndex = linkedKnot.Knot,
-                                    WorldPosition = worldPos
+                                    WorldPosition = linkedWorldPos
                                 });
                                 
-                                // Mark as processed
                                 processed.Add($"{linkedKnot.Spline}_{linkedKnot.Knot}");
+                                
+                                Debug.Log($"[RailMap] Linked knot: Spline {linkedKnot.Spline}, Knot {linkedKnot.Knot} at {linkedWorldPos}");
                             }
+                            
+                            // Use average position for the link
+                            worldPos = sumPos / count;
+                            Debug.Log($"[RailMap] Link average position calculated: {worldPos}");
                         }
                         else
                         {

@@ -45,20 +45,20 @@ namespace Core.LocalPlayer
             
             Debug.Log($"[LocalPlayerMovement] Spline {segment.SplineIndex} has {_spline.Count} knots");
             
-            _startT = (float)segment.StartKnotIndex / (_spline.Count - 1);
-            _endT = (float)segment.EndKnotIndex / (_spline.Count - 1);
+            // Convert knot indices to normalized t values (0-1)
+            _startT = _spline.ConvertIndexUnit(segment.StartKnotIndex, PathIndexUnit.Knot, PathIndexUnit.Normalized);
+            _endT = _spline.ConvertIndexUnit(segment.EndKnotIndex, PathIndexUnit.Knot, PathIndexUnit.Normalized);
             
             Debug.Log($"[LocalPlayerMovement] StartT={_startT}, EndT={_endT}");
             
-            float totalSplineLength = _spline.GetLength();
-            float startDistance = _startT * totalSplineLength;
-            float endDistance = _endT * totalSplineLength;
+            // Calculate actual arc length between these knots
+            float startDistance = _spline.ConvertIndexUnit(segment.StartKnotIndex, PathIndexUnit.Knot, PathIndexUnit.Distance);
+            float endDistance = _spline.ConvertIndexUnit(segment.EndKnotIndex, PathIndexUnit.Knot, PathIndexUnit.Distance);
             _segmentLength = Mathf.Abs(endDistance - startDistance);
             
             _speedDivLength = speed / _segmentLength;
             
-            Debug.Log($"[LocalPlayerMovement] Total spline length={totalSplineLength}, segment length={_segmentLength}");
-            Debug.Log($"[LocalPlayerMovement] speed={speed}, speedDivLength={_speedDivLength}");
+            Debug.Log($"[LocalPlayerMovement] Segment length={_segmentLength}, speed={speed}, speedDivLength={_speedDivLength}");
             
             _normalizedTime = 0f;
             _isMoving = true;
