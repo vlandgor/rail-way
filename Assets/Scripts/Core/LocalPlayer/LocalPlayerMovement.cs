@@ -9,6 +9,7 @@ namespace Core.LocalPlayer
     {
         [Header("Movement Settings")]
         [SerializeField] private float speed = 5f;
+        [SerializeField] private Vector3 offset = new Vector3(0f, 0.1f, 0f);
 
         private SplineContainer _splineContainer;
         private Transform _splineTransform;
@@ -93,13 +94,24 @@ namespace Core.LocalPlayer
         {
             float splineT = Mathf.Lerp(_startT, _endT, t);
 
-            _spline.Evaluate(splineT, out float3 pos, out float3 tan, out float3 _);
+            _spline.Evaluate(splineT, out float3 pos, out float3 tan, out float3 up);
 
-            transform.position = _splineTransform.TransformPoint(pos);
+            Vector3 worldPos = _splineTransform.TransformPoint(pos);
+            
+            // Apply offset relative to the spline's orientation
+            Vector3 worldUp = _splineTransform.TransformDirection(up);
+            Vector3 tangentDir = _splineTransform.TransformDirection(tan);
+            Vector3 right = Vector3.Cross(tangentDir, worldUp).normalized;
+            
+            // Apply offset in spline-local space
+            worldPos += worldUp * offset.y;
+            worldPos += right * offset.x;
+            worldPos += tangentDir * offset.z;
+            
+            transform.position = worldPos;
 
             if (math.lengthsq(tan) > 0.0001f)
             {
-                Vector3 tangentDir = _splineTransform.TransformDirection(tan);
                 // Flip direction if going backward
                 if (_currentSegment.Direction < 0)
                     tangentDir = -tangentDir;
