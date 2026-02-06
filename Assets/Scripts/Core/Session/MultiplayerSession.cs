@@ -48,7 +48,7 @@ namespace Core.Session
 
         private void OnClientConnected(ulong clientId)
         {
-            playerSpawnManager.SpawnPlayer(clientId);
+            //playerSpawnManager.SpawnPlayer(clientId);
         }
 
         private void OnDisconnect(ulong clientId)

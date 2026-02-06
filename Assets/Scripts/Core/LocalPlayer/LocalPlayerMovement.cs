@@ -1,3 +1,4 @@
+using System;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Splines;
@@ -6,71 +7,113 @@ namespace Core.LocalPlayer
 {
     public class LocalPlayerMovement : MonoBehaviour
     {
-        [Header("Spline Settings")]
-        [SerializeField] private SplineContainer splineContainer;
+        [Header("Movement Settings")]
         [SerializeField] private float speed = 5f;
-        [SerializeField] private bool loop = false;
 
-        private float _normalizedTime = 0f;
-        private float _splineLength;
-        private float _speedDivLength; // Cached division
-        private Spline _spline;
+        private SplineContainer _splineContainer;
         private Transform _splineTransform;
-
-        private void Start()
-        {
-            CacheSplineData();
-        }
+        private Spline _spline;
+        
+        private bool _isMoving = false;
+        private float _normalizedTime = 0f;
+        private float _segmentLength;
+        private float _speedDivLength;
+        
+        private Core.Rail.RailSegment _currentSegment;
+        private Action<int> _onReachedDestination;
+        
+        private float _startT;
+        private float _endT;
 
         private void Update()
         {
-            if (_spline == null)
+            if (!_isMoving || _spline == null)
                 return;
 
-            MoveAlongSpline();
+            MoveAlongSegment();
         }
 
-        private void CacheSplineData()
+        public void MoveAlongSegment(Core.Rail.RailSegment segment, SplineContainer container, Action<int> onComplete)
         {
-            if (splineContainer == null)
-                return;
-
-            _spline = splineContainer.Spline;
-            _splineTransform = splineContainer.transform;
-            _splineLength = _spline.GetLength();
-            _speedDivLength = speed / _splineLength;
+            Debug.Log($"[LocalPlayerMovement] MoveAlongSegment called: {segment.StartStopPointId}->{segment.EndStopPointId}, knots {segment.StartKnotIndex}->{segment.EndKnotIndex}");
+            
+            _currentSegment = segment;
+            _splineContainer = container;
+            _spline = container.Splines[segment.SplineIndex];
+            _splineTransform = container.transform;
+            _onReachedDestination = onComplete;
+            
+            Debug.Log($"[LocalPlayerMovement] Spline {segment.SplineIndex} has {_spline.Count} knots");
+            
+            _startT = (float)segment.StartKnotIndex / (_spline.Count - 1);
+            _endT = (float)segment.EndKnotIndex / (_spline.Count - 1);
+            
+            Debug.Log($"[LocalPlayerMovement] StartT={_startT}, EndT={_endT}");
+            
+            float totalSplineLength = _spline.GetLength();
+            float startDistance = _startT * totalSplineLength;
+            float endDistance = _endT * totalSplineLength;
+            _segmentLength = Mathf.Abs(endDistance - startDistance);
+            
+            _speedDivLength = speed / _segmentLength;
+            
+            Debug.Log($"[LocalPlayerMovement] Total spline length={totalSplineLength}, segment length={_segmentLength}");
+            Debug.Log($"[LocalPlayerMovement] speed={speed}, speedDivLength={_speedDivLength}");
+            
+            _normalizedTime = 0f;
+            _isMoving = true;
+            
+            Debug.Log($"[LocalPlayerMovement] Movement started");
         }
 
-        private void MoveAlongSpline()
+        private void MoveAlongSegment()
         {
             _normalizedTime += _speedDivLength * Time.deltaTime;
 
             if (_normalizedTime >= 1f)
             {
-                if (loop)
-                    _normalizedTime -= 1f;
-                else
-                {
-                    _normalizedTime = 1f;
-                    return; // Stop evaluating once complete
-                }
+                _normalizedTime = 1f;
+                _isMoving = false;
+                
+                Debug.Log($"[LocalPlayerMovement] Reached end of segment at t={_normalizedTime}");
+                
+                EvaluatePosition(_normalizedTime);
+                
+                Debug.Log($"[LocalPlayerMovement] Final position: {transform.position}");
+                Debug.Log($"[LocalPlayerMovement] Calling completion callback with stop point {_currentSegment.EndStopPointId}");
+                
+                _onReachedDestination?.Invoke(_currentSegment.EndStopPointId);
+                return;
             }
 
-            // Single evaluation call
-            _spline.Evaluate(_normalizedTime, out float3 pos, out float3 tan, out float3 _);
-
-            // Transform to world space
-            transform.position = _splineTransform.TransformPoint(pos);
-
-            // Only update rotation if tangent is meaningful
-            if (math.lengthsq(tan) > 0.0001f)
-                transform.forward = _splineTransform.TransformDirection(tan);
+            EvaluatePosition(_normalizedTime);
         }
 
-        // Call this if you modify the spline at runtime
-        public void RefreshSplineData()
+        private void EvaluatePosition(float t)
         {
-            CacheSplineData();
+            float splineT = Mathf.Lerp(_startT, _endT, t);
+
+            _spline.Evaluate(splineT, out float3 pos, out float3 tan, out float3 _);
+
+            transform.position = _splineTransform.TransformPoint(pos);
+
+            if (math.lengthsq(tan) > 0.0001f)
+            {
+                Vector3 tangentDir = _splineTransform.TransformDirection(tan);
+                // Flip direction if going backward
+                if (_currentSegment.Direction < 0)
+                    tangentDir = -tangentDir;
+                transform.forward = tangentDir;
+            }
+        }
+
+        public bool IsMoving => _isMoving;
+
+        public void StopMovement()
+        {
+            Debug.Log($"[LocalPlayerMovement] StopMovement called");
+            _isMoving = false;
+            _onReachedDestination = null;
         }
     }
 }
