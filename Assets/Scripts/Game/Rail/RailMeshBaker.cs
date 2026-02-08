@@ -9,7 +9,7 @@ namespace Core.Rail
     /// <summary>
     /// Generates and deforms models along a Unity Spline as a single combined mesh per spline
     /// </summary>
-    public class SplineModelGenerator : MonoBehaviour
+    public class RailMeshGenerator : MonoBehaviour
     {
         [Header("Setup")]
         [Tooltip("The SplineContainer to follow")]

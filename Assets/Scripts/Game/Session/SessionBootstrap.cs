@@ -9,7 +9,7 @@ namespace Core.Session
 {
     public class SessionBootstrap : MonoBehaviour
     {
-        [SerializeField] private Rail.RailSplineMap railSplineMap;
+        //[SerializeField] private Rail.RailSplineMap railSplineMap;
 
         private async void Start()
         {
