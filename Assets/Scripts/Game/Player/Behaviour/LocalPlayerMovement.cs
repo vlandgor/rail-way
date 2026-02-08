@@ -3,7 +3,7 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Splines;
 
-namespace Core.LocalPlayer
+namespace Game.Player.Behaviour
 {
     public class LocalPlayerMovement : MonoBehaviour
     {
@@ -36,21 +36,15 @@ namespace Core.LocalPlayer
 
         public void MoveAlongSegment(Core.Rail.RailSegment segment, SplineContainer container, Action<int> onComplete)
         {
-            Debug.Log($"[LocalPlayerMovement] MoveAlongSegment called: {segment.StartStopPointId}->{segment.EndStopPointId}, knots {segment.StartKnotIndex}->{segment.EndKnotIndex}");
-            
             _currentSegment = segment;
             _splineContainer = container;
             _spline = container.Splines[segment.SplineIndex];
             _splineTransform = container.transform;
             _onReachedDestination = onComplete;
             
-            Debug.Log($"[LocalPlayerMovement] Spline {segment.SplineIndex} has {_spline.Count} knots");
-            
             // Convert knot indices to normalized t values (0-1)
             _startT = _spline.ConvertIndexUnit(segment.StartKnotIndex, PathIndexUnit.Knot, PathIndexUnit.Normalized);
             _endT = _spline.ConvertIndexUnit(segment.EndKnotIndex, PathIndexUnit.Knot, PathIndexUnit.Normalized);
-            
-            Debug.Log($"[LocalPlayerMovement] StartT={_startT}, EndT={_endT}");
             
             // Calculate actual arc length between these knots
             float startDistance = _spline.ConvertIndexUnit(segment.StartKnotIndex, PathIndexUnit.Knot, PathIndexUnit.Distance);
@@ -59,12 +53,8 @@ namespace Core.LocalPlayer
             
             _speedDivLength = speed / _segmentLength;
             
-            Debug.Log($"[LocalPlayerMovement] Segment length={_segmentLength}, speed={speed}, speedDivLength={_speedDivLength}");
-            
             _normalizedTime = 0f;
             _isMoving = true;
-            
-            Debug.Log($"[LocalPlayerMovement] Movement started");
         }
 
         private void MoveAlongSegment()
@@ -76,12 +66,7 @@ namespace Core.LocalPlayer
                 _normalizedTime = 1f;
                 _isMoving = false;
                 
-                Debug.Log($"[LocalPlayerMovement] Reached end of segment at t={_normalizedTime}");
-                
                 EvaluatePosition(_normalizedTime);
-                
-                Debug.Log($"[LocalPlayerMovement] Final position: {transform.position}");
-                Debug.Log($"[LocalPlayerMovement] Calling completion callback with stop point {_currentSegment.EndStopPointId}");
                 
                 _onReachedDestination?.Invoke(_currentSegment.EndStopPointId);
                 return;
@@ -123,7 +108,6 @@ namespace Core.LocalPlayer
 
         public void StopMovement()
         {
-            Debug.Log($"[LocalPlayerMovement] StopMovement called");
             _isMoving = false;
             _onReachedDestination = null;
         }

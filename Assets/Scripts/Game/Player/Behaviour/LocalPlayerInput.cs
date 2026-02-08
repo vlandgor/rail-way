@@ -1,8 +1,8 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using System;
 
-namespace Core.LocalPlayer
+namespace Game.Player.Behaviour
 {
     public class LocalPlayerInput : MonoBehaviour
     {
