@@ -4,12 +4,12 @@ using UnityEngine;
 using UnityEngine.ProBuilder;
 using UnityEngine.Splines;
 
-namespace Core.Rail
+namespace Game.Rail
 {
     /// <summary>
     /// Generates and deforms models along a Unity Spline as a single combined mesh per spline
     /// </summary>
-    public class RailMeshGenerator : MonoBehaviour
+    public class RailMeshBaker : MonoBehaviour
     {
         [Header("Setup")]
         [Tooltip("The SplineContainer to follow")]

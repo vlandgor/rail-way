@@ -1,4 +1,5 @@
 using Game.Player.Behaviour;
+using Game.Rail;
 using UnityEngine;
 
 namespace Game.Player
@@ -7,7 +8,7 @@ namespace Game.Player
     {
         [SerializeField] private LocalPlayerInput _localPlayerInput;
         [SerializeField] private LocalPlayerMovement _movement;
-        [SerializeField] private Core.Rail.RailMap _railMap;
+        [SerializeField] private RailGraph railGraph;
         
         [Header("Initialization")]
         [SerializeField] private int _startingStopPointId = 0;
@@ -27,16 +28,16 @@ namespace Game.Player
 
         private void InitializePosition()
         {
-            if (_railMap == null)
+            if (railGraph == null)
                 return;
             
             _currentStopPointId = _startingStopPointId;
             
-            Vector3 startPosition = _railMap.GetStopPointPosition(_currentStopPointId);
+            Vector3 startPosition = railGraph.GetStopPointPosition(_currentStopPointId);
             
             transform.position = startPosition;
             
-            Vector3 initialDirection = _railMap.GetStopPointTangent(_currentStopPointId);
+            Vector3 initialDirection = railGraph.GetStopPointTangent(_currentStopPointId);
             if (initialDirection != Vector3.zero)
             {
                 transform.forward = initialDirection;
@@ -50,13 +51,13 @@ namespace Game.Player
                 return;
             }
             
-            var nextSegment = _railMap.GetNextSegment(_currentStopPointId, direction);
+            var nextSegment = railGraph.GetNextSegment(_currentStopPointId, direction);
             
             if (nextSegment != null)
             {
                 _movement.MoveAlongSegment(
                     nextSegment, 
-                    _railMap.GetSplineContainer(), 
+                    railGraph.GetSplineContainer(), 
                     OnReachedStopPoint
                 );
             }

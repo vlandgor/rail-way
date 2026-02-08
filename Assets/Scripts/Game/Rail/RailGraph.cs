@@ -4,9 +4,9 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Splines;
 
-namespace Core.Rail
+namespace Game.Rail
 {
-    public class RailMap : MonoBehaviour
+    public class RailGraph : MonoBehaviour
     {
         [SerializeField] private SplineContainer splineContainer;
         

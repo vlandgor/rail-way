@@ -1,4 +1,5 @@
 using System;
+using Game.Rail;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Splines;
@@ -20,7 +21,7 @@ namespace Game.Player.Behaviour
         private float _segmentLength;
         private float _speedDivLength;
         
-        private Core.Rail.RailSegment _currentSegment;
+        private RailSegment _currentSegment;
         private Action<int> _onReachedDestination;
         
         private float _startT;
@@ -34,7 +35,7 @@ namespace Game.Player.Behaviour
             MoveAlongSegment();
         }
 
-        public void MoveAlongSegment(Core.Rail.RailSegment segment, SplineContainer container, Action<int> onComplete)
+        public void MoveAlongSegment(RailSegment segment, SplineContainer container, Action<int> onComplete)
         {
             _currentSegment = segment;
             _splineContainer = container;
