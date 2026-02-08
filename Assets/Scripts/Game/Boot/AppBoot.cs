@@ -1,3 +1,4 @@
+using Services.Account;
 using Services.Loading;
 using Services.Matchmaking;
 using UnityEngine;
@@ -17,6 +18,7 @@ namespace Core.Boot
         {
             LoadingService.Instance.Initialize();
             MatchmakingService.Instance.Initialize();
+            AccountService.Instance.Initialize();
         }
     }
 }
