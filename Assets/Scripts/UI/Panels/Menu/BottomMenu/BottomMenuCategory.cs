@@ -3,9 +3,9 @@ namespace UI.Panels.Menu.BottomMenu
     public enum BottomMenuCategory
     {
         Shop,
-        Leaderboard,
+        Leaders,
         Home,
-        Customization,
+        Robots,
         Events
     }
 }

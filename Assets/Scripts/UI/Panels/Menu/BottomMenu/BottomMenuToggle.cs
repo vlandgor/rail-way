@@ -35,7 +35,7 @@ namespace UI.Panels.Menu.BottomMenu
 
         private void HandleToggleValueChanged(bool isOn)
         {
-            _layoutElement.flexibleWidth = isOn ? 1.8f : 1f;
+            _layoutElement.flexibleWidth = isOn ? 1.4f : 1f;
             _backgroundSelectedImage.gameObject.SetActive(isOn);
             
             if (isOn)
