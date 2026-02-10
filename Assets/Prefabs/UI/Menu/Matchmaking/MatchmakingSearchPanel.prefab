@@ -863,7 +863,7 @@ GameObject:
   - component: {fileID: 258738786078500082}
   - component: {fileID: 6134117031416019565}
   m_Layer: 0
-  m_Name: LookingForMatchPanel
+  m_Name: MatchmakingSearchPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
