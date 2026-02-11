@@ -3,7 +3,7 @@ using UI.Base;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace UI.Panels.Menu.Home
+namespace UI.Panels.Menu.Hub.Home
 {
     public class HomePanel : BasePanel
     {

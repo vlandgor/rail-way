@@ -1,10 +1,9 @@
-using System;
 using TMPro;
 using UI.Base;
 using UnityEngine;
 using UnityEngine.UI;
 
-namespace UI.Panels.Menu.TopAccount
+namespace UI.Panels.Menu.Hub.Home.TopAccount
 {
     public class TopAccountPanel : BasePanel
     {
