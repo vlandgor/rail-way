@@ -11,7 +11,7 @@ namespace Core.Boot
         {
             InitializeServices();
 
-            LoadingService.Instance.LoadScene("Menu_Scene");
+            //LoadingService.Instance.LoadScene("Menu_Scene");
         }
 
         private void InitializeServices()

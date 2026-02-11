@@ -53,7 +53,7 @@ namespace Services.Utilities
             }
         }
 
-        public void Initialize()
+        public virtual void Initialize()
         {
             Debug.Log($"[{typeof(T).Name}]: Service Initialized");
         }

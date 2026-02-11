@@ -1,187 +1,141 @@
 using System;
-using System.Threading.Tasks;
-using Unity.Services.Authentication;
-using Unity.Services.Core;
-using UnityEngine;
+using Cysharp.Threading.Tasks;
+using Services.Account.Providers;
 using Services.Utilities;
+using UnityEngine;
 
 namespace Services.Account
 {
+    public enum AccountProviderType
+    {
+        Ugs,
+        Firebase
+    }
+    
     public class AccountService : Singleton<AccountService>
     {
-        // Events
-        public event Action<string> OnSignInSuccess;
-        public event Action<string> OnSignInFailed;
-        public event Action OnSignOutSuccess;
-
-        // Properties
-        public bool IsSignedIn => AuthenticationService.Instance.IsSignedIn;
-        public string PlayerId => AuthenticationService.Instance.PlayerId;
-        public string PlayerName => AuthenticationService.Instance.PlayerName;
-
-        private bool _isInitialized = false;
-
-        protected override void Awake()
+        public event Action<string> OnSignInSuccess
         {
-            base.Awake();
-            
-            // Subscribe to authentication events
-            AuthenticationService.Instance.SignedIn += OnSignedIn;
-            AuthenticationService.Instance.SignedOut += OnSignedOut;
-            AuthenticationService.Instance.SignInFailed += OnSignInFailedHandler;
-            AuthenticationService.Instance.Expired += OnSessionExpired;
+            add
+            {
+                if (_provider != null)
+                    _provider.OnSignInSuccess += value;
+            }
+            remove
+            {
+                if (_provider != null)
+                    _provider.OnSignInSuccess -= value;
+            }
         }
+        public event Action<string> OnSignInFailed
+        {
+            add
+            {
+                if (_provider != null)
+                    _provider.OnSignInFailed += value;
+            }
+            remove
+            {
+                if (_provider != null)
+                    _provider.OnSignInFailed -= value;
+            }
+        }
+        public event Action OnSignOutSuccess
+        {
+            add
+            {
+                if (_provider != null)
+                    _provider.OnSignOutSuccess += value;
+            }
+            remove
+            {
+                if (_provider != null)
+                    _provider.OnSignOutSuccess -= value;
+            }
+        }
+        
+        [SerializeField] private AccountProviderType _providerType = AccountProviderType.Ugs;
+
+        private IAccountProvider _provider;
+        
+        public bool IsSignedIn => _provider?.IsSignedIn ?? false;
+        public string PlayerId => _provider?.PlayerId ?? string.Empty;
+        public string PlayerName => _provider?.PlayerName ?? string.Empty;
+        public bool IsInitialized => _provider?.IsInitialized ?? false;
 
         private void OnDestroy()
         {
-            // Unsubscribe from authentication events
-            if (AuthenticationService.Instance != null)
-            {
-                AuthenticationService.Instance.SignedIn -= OnSignedIn;
-                AuthenticationService.Instance.SignedOut -= OnSignedOut;
-                AuthenticationService.Instance.SignInFailed -= OnSignInFailedHandler;
-                AuthenticationService.Instance.Expired -= OnSessionExpired;
-            }
+            _provider?.Cleanup();
         }
 
-        /// <summary>
-        /// Initialize Unity Services and prepare for authentication
-        /// </summary>
-        public async Task<bool> InitializeAsync()
+        public override void Initialize()
         {
-            if (_isInitialized)
-            {
-                Debug.Log("[AccountService] Already initialized");
-                return true;
-            }
-
-            try
-            {
-                Debug.Log("[AccountService] Initializing Unity Services...");
-                await UnityServices.InitializeAsync();
-                _isInitialized = true;
-                Debug.Log("[AccountService] Unity Services initialized successfully");
-                return true;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[AccountService] Failed to initialize Unity Services: {e.Message}");
-                return false;
-            }
+            base.Initialize();
+            
+            InitializeProvider();
+            InitializeServiceAsync().Forget();
         }
 
-        /// <summary>
-        /// Sign in anonymously as a guest
-        /// </summary>
-        public async Task<bool> SignInAnonymouslyAsync()
+        public void SwitchProvider(AccountProviderType newProviderType)
         {
-            if (!_isInitialized)
+            if (_providerType == newProviderType)
             {
-                Debug.LogWarning("[AccountService] Cannot sign in - service not initialized. Initializing now...");
-                bool initialized = await InitializeAsync();
-                if (!initialized)
-                {
-                    return false;
-                }
-            }
-
-            if (IsSignedIn)
-            {
-                Debug.Log($"[AccountService] Already signed in as {PlayerId}");
-                return true;
-            }
-
-            try
-            {
-                Debug.Log("[AccountService] Signing in anonymously...");
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
-                return true;
-            }
-            catch (AuthenticationException e)
-            {
-                Debug.LogError($"[AccountService] Authentication failed: {e.Message}");
-                OnSignInFailed?.Invoke(e.Message);
-                return false;
-            }
-            catch (RequestFailedException e)
-            {
-                Debug.LogError($"[AccountService] Request failed: {e.Message}");
-                OnSignInFailed?.Invoke(e.Message);
-                return false;
-            }
-            catch (Exception e)
-            {
-                Debug.LogError($"[AccountService] Unexpected error during sign in: {e.Message}");
-                OnSignInFailed?.Invoke(e.Message);
-                return false;
-            }
-        }
-
-        /// <summary>
-        /// Sign out the current player
-        /// </summary>
-        public void SignOut()
-        {
-            if (!IsSignedIn)
-            {
-                Debug.LogWarning("[AccountService] Cannot sign out - no user is signed in");
+                Debug.LogWarning($"[AccountService] Already using {newProviderType} provider");
                 return;
             }
 
-            try
+            _provider?.Cleanup();
+
+            _providerType = newProviderType;
+            InitializeProvider();
+            
+            Debug.Log($"[AccountService] Switched to {newProviderType} provider");
+        }
+
+        // Public API - Delegate to provider
+        public UniTask<bool> InitializeAsync() => _provider.InitializeAsync();
+        public UniTask<bool> SignInAnonymouslyAsync() => _provider.SignInAnonymouslyAsync();
+        public UniTask<bool> SignInWithEmailPasswordAsync(string email, string password) => _provider.SignInWithEmailPasswordAsync(email, password);
+        public UniTask<bool> SignUpWithEmailPasswordAsync(string email, string password) => _provider.SignUpWithEmailPasswordAsync(email, password);
+        public UniTask<bool> SignInWithUnityPlayerAccountAsync() => _provider.SignInWithUnityPlayerAccountAsync();
+        public void SignOut() => _provider.SignOut();
+        public void ClearSessionToken() => _provider.ClearSessionToken();
+        public string GetPlayerInfo() => _provider.GetPlayerInfo();
+        
+        private async UniTaskVoid InitializeServiceAsync()
+        {
+            Debug.Log("[AccountService] Starting async initialization...");
+            bool success = await _provider.InitializeAsync();
+    
+            if (success)
             {
-                Debug.Log("[AccountService] Signing out...");
-                AuthenticationService.Instance.SignOut();
+                Debug.Log("[AccountService] Initialization completed successfully");
             }
-            catch (Exception e)
+            else
             {
-                Debug.LogError($"[AccountService] Error during sign out: {e.Message}");
+                Debug.LogError("[AccountService] Initialization failed");
             }
         }
-
-        /// <summary>
-        /// Clear cached session token to force a fresh authentication
-        /// </summary>
-        public void ClearSessionToken()
+        
+        private void InitializeProvider()
         {
-            AuthenticationService.Instance.ClearSessionToken();
-            Debug.Log("[AccountService] Session token cleared");
-        }
-
-        // Event Handlers
-        private void OnSignedIn()
-        {
-            Debug.Log($"[AccountService] ✓ Signed in successfully! PlayerId: {PlayerId}");
-            OnSignInSuccess?.Invoke(PlayerId);
-        }
-
-        private void OnSignedOut()
-        {
-            Debug.Log("[AccountService] Signed out");
-            OnSignOutSuccess?.Invoke();
-        }
-
-        private void OnSignInFailedHandler(RequestFailedException exception)
-        {
-            Debug.LogError($"[AccountService] Sign in failed: {exception.Message}");
-            OnSignInFailed?.Invoke(exception.Message);
-        }
-
-        private async void OnSessionExpired()
-        {
-            Debug.LogWarning("[AccountService] Session expired. Attempting to re-authenticate...");
-            await SignInAnonymouslyAsync();
-        }
-
-        // Utility Methods
-        public string GetPlayerInfo()
-        {
-            if (!IsSignedIn)
+            switch (_providerType)
             {
-                return "Not signed in";
+                case AccountProviderType.Ugs:
+                    _provider = new UgsAccountProvider();
+                    Debug.Log("[AccountService] Using UGS Account Provider");
+                    break;
+                
+                case AccountProviderType.Firebase:
+                    _provider = new FirebaseAccountProvider();
+                    Debug.Log("[AccountService] Using Firebase Account Provider");
+                    break;
+                
+                default:
+                    Debug.LogError($"[AccountService] Unknown provider type: {_providerType}");
+                    _provider = new UgsAccountProvider();
+                    break;
             }
-
-            return $"PlayerId: {PlayerId}\nPlayerName: {PlayerName}\nIsSignedIn: {IsSignedIn}";
         }
     }
 }
