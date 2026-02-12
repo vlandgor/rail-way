@@ -40,6 +40,32 @@ namespace Services.Account
                     _provider.OnSignInFailed -= value;
             }
         }
+        public event Action<string> OnSignUpSuccess
+        {
+            add
+            {
+                if (_provider != null)
+                    _provider.OnSignUpSuccess += value;
+            }
+            remove
+            {
+                if (_provider != null)
+                    _provider.OnSignUpSuccess -= value;
+            }
+        }
+        public event Action<string> OnSignUpFailed
+        {
+            add
+            {
+                if (_provider != null)
+                    _provider.OnSignUpFailed += value;
+            }
+            remove
+            {
+                if (_provider != null)
+                    _provider.OnSignUpFailed -= value;
+            }
+        }
         public event Action OnSignOutSuccess
         {
             add
@@ -76,6 +102,21 @@ namespace Services.Account
             InitializeServiceAsync().Forget();
         }
 
+        private async UniTaskVoid InitializeServiceAsync()
+        {
+            Debug.Log("[AccountService] Starting async initialization...");
+            bool success = await _provider.InitializeAsync();
+            
+            if (success)
+            {
+                Debug.Log("[AccountService] Initialization completed successfully");
+            }
+            else
+            {
+                Debug.LogError("[AccountService] Initialization failed");
+            }
+        }
+
         public void SwitchProvider(AccountProviderType newProviderType)
         {
             if (_providerType == newProviderType)
@@ -92,7 +133,6 @@ namespace Services.Account
             Debug.Log($"[AccountService] Switched to {newProviderType} provider");
         }
 
-        // Public API - Delegate to provider
         public UniTask<bool> InitializeAsync() => _provider.InitializeAsync();
         public UniTask<bool> SignInAnonymouslyAsync() => _provider.SignInAnonymouslyAsync();
         public UniTask<bool> SignInWithEmailPasswordAsync(string email, string password) => _provider.SignInWithEmailPasswordAsync(email, password);
@@ -101,21 +141,6 @@ namespace Services.Account
         public void SignOut() => _provider.SignOut();
         public void ClearSessionToken() => _provider.ClearSessionToken();
         public string GetPlayerInfo() => _provider.GetPlayerInfo();
-        
-        private async UniTaskVoid InitializeServiceAsync()
-        {
-            Debug.Log("[AccountService] Starting async initialization...");
-            bool success = await _provider.InitializeAsync();
-    
-            if (success)
-            {
-                Debug.Log("[AccountService] Initialization completed successfully");
-            }
-            else
-            {
-                Debug.LogError("[AccountService] Initialization failed");
-            }
-        }
         
         private void InitializeProvider()
         {

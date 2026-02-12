@@ -23,6 +23,10 @@ namespace UI.Panels.Boot.Authorization
         [SerializeField] private Button _continueAsGuestButton;
         [SerializeField] private Button _forgotPasswordButton;
         [SerializeField] private Button _createAccountButton;
+        
+        [SerializeField] private GameObject _errorMessageContainer;
+        [SerializeField] private TextMeshProUGUI _errorMessageText;
+        [SerializeField] private Color _errorTextColor = new Color(0.8f, 0.2f, 0.2f);
 
         private bool _isProcessing;
 
@@ -34,9 +38,15 @@ namespace UI.Panels.Boot.Authorization
             _forgotPasswordButton.onClick.AddListener(HandleForgotPasswordButtonClicked);
             _createAccountButton.onClick.AddListener(HandleCreateAccountButtonClicked);
             
-            // Subscribe to account service events
             AccountService.Instance.OnSignInSuccess += HandleSignInSuccess;
             AccountService.Instance.OnSignInFailed += HandleSignInFailed;
+            
+            if (_errorMessageText != null)
+            {
+                _errorMessageText.color = _errorTextColor;
+            }
+            
+            HideError();
         }
 
         private void OnDestroy()
@@ -47,7 +57,6 @@ namespace UI.Panels.Boot.Authorization
             _forgotPasswordButton.onClick.RemoveListener(HandleForgotPasswordButtonClicked);
             _createAccountButton.onClick.RemoveListener(HandleCreateAccountButtonClicked);
             
-            // Unsubscribe from account service events
             if (AccountService.Instance != null)
             {
                 AccountService.Instance.OnSignInSuccess -= HandleSignInSuccess;
@@ -72,12 +81,14 @@ namespace UI.Panels.Boot.Authorization
 
         private void HandleForgotPasswordButtonClicked()
         {
+            HideError();
             _forgotPasswordPanel.Enable();
             Disable();
         }
 
         private void HandleCreateAccountButtonClicked()
         {
+            HideError();
             _signUpPanel.Enable();
             Disable();
         }
@@ -86,25 +97,26 @@ namespace UI.Panels.Boot.Authorization
         {
             if (_isProcessing) return;
 
+            HideError();
+
             string email = _emailInputField.text.Trim();
             string password = _passwordInputField.text;
 
-            // Validation
             if (string.IsNullOrEmpty(email))
             {
-                Debug.LogWarning("[SignInPanel] Please enter your email address");
+                ShowError("Please enter your email address");
                 return;
             }
 
             if (string.IsNullOrEmpty(password))
             {
-                Debug.LogWarning("[SignInPanel] Please enter your password");
+                ShowError("Please enter your password");
                 return;
             }
 
             if (!IsValidEmail(email))
             {
-                Debug.LogWarning("[SignInPanel] Please enter a valid email address");
+                ShowError("Please enter a valid email address");
                 return;
             }
 
@@ -115,7 +127,6 @@ namespace UI.Panels.Boot.Authorization
 
                 Debug.Log($"[SignInPanel] Signing in with email: {email}");
                 
-                // Initialize if needed
                 if (!AccountService.Instance.IsInitialized)
                 {
                     await AccountService.Instance.InitializeAsync();
@@ -126,12 +137,12 @@ namespace UI.Panels.Boot.Authorization
                 if (!success)
                 {
                     Debug.LogWarning("[SignInPanel] Sign in with email/password failed");
-                    // Error will be handled by HandleSignInFailed event
                 }
             }
             catch (Exception e)
             {
                 Debug.LogError($"[SignInPanel] Exception during sign in: {e.Message}");
+                ShowError("An unexpected error occurred. Please try again.");
             }
             finally
             {
@@ -144,6 +155,8 @@ namespace UI.Panels.Boot.Authorization
         {
             if (_isProcessing) return;
 
+            HideError();
+
             try
             {
                 _isProcessing = true;
@@ -151,7 +164,6 @@ namespace UI.Panels.Boot.Authorization
 
                 Debug.Log("[SignInPanel] Signing in with Unity Player Account");
                 
-                // Initialize if needed
                 if (!AccountService.Instance.IsInitialized)
                 {
                     await AccountService.Instance.InitializeAsync();
@@ -162,12 +174,12 @@ namespace UI.Panels.Boot.Authorization
                 if (!success)
                 {
                     Debug.LogWarning("[SignInPanel] Sign in with Unity Player Account failed");
-                    // Error will be handled by HandleSignInFailed event
                 }
             }
             catch (Exception e)
             {
                 Debug.LogError($"[SignInPanel] Exception during Unity Player Account sign in: {e.Message}");
+                ShowError("Unity Player Account sign-in failed. Please try again.");
             }
             finally
             {
@@ -180,6 +192,8 @@ namespace UI.Panels.Boot.Authorization
         {
             if (_isProcessing) return;
 
+            HideError();
+
             try
             {
                 _isProcessing = true;
@@ -187,7 +201,6 @@ namespace UI.Panels.Boot.Authorization
 
                 Debug.Log("[SignInPanel] Signing in anonymously");
                 
-                // Initialize if needed
                 if (!AccountService.Instance.IsInitialized)
                 {
                     await AccountService.Instance.InitializeAsync();
@@ -198,12 +211,12 @@ namespace UI.Panels.Boot.Authorization
                 if (!success)
                 {
                     Debug.LogWarning("[SignInPanel] Anonymous sign in failed");
-                    // Error will be handled by HandleSignInFailed event
                 }
             }
             catch (Exception e)
             {
                 Debug.LogError($"[SignInPanel] Exception during anonymous sign in: {e.Message}");
+                ShowError("Guest sign-in failed. Please try again.");
             }
             finally
             {
@@ -212,22 +225,47 @@ namespace UI.Panels.Boot.Authorization
             }
         }
 
-        // Event Handlers
         private void HandleSignInSuccess(string playerId)
         {
             Debug.Log($"[SignInPanel] Sign in successful! Player ID: {playerId}");
+            HideError();
             
             // TODO: Navigate to main game or next screen
-            // Example: SceneManager.LoadScene("MainGame");
-            // Or: PanelManager.Instance.ShowPanel<MainMenuPanel>();
         }
 
         private void HandleSignInFailed(string error)
         {
             Debug.LogError($"[SignInPanel] Sign in failed: {error}");
+            ShowError(error);
         }
 
-        // UI Helper Methods
+        private void ShowError(string message)
+        {
+            if (_errorMessageText != null)
+            {
+                _errorMessageText.text = message;
+                _errorMessageText.gameObject.SetActive(true);
+            }
+
+            if (_errorMessageContainer != null)
+            {
+                _errorMessageContainer.SetActive(true);
+            }
+        }
+
+        private void HideError()
+        {
+            if (_errorMessageText != null)
+            {
+                _errorMessageText.gameObject.SetActive(false);
+            }
+
+            if (_errorMessageContainer != null)
+            {
+                _errorMessageContainer.SetActive(false);
+            }
+        }
+
         private void SetButtonsInteractable(bool interactable)
         {
             _signInButton.interactable = interactable;
@@ -237,7 +275,6 @@ namespace UI.Panels.Boot.Authorization
             _createAccountButton.interactable = interactable;
         }
 
-        // Validation Helper
         private bool IsValidEmail(string email)
         {
             try

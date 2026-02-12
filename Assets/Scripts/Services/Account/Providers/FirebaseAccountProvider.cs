@@ -6,12 +6,12 @@ namespace Services.Account.Providers
 {
     public class FirebaseAccountProvider : IAccountProvider
     {
-        // Events
         public event Action<string> OnSignInSuccess;
         public event Action<string> OnSignInFailed;
+        public event Action<string> OnSignUpSuccess;
+        public event Action<string> OnSignUpFailed;
         public event Action OnSignOutSuccess;
 
-        // Properties
         public bool IsSignedIn { get; private set; }
         public string PlayerId { get; private set; }
         public string PlayerName { get; private set; }
@@ -21,16 +21,6 @@ namespace Services.Account.Providers
         {
             Debug.LogWarning("[FirebaseAccountProvider] Not implemented yet");
             await UniTask.Yield();
-            
-            // TODO: Initialize Firebase
-            // Firebase.FirebaseApp.CheckAndFixDependenciesAsync().ContinueWith(task => {
-            //     var dependencyStatus = task.Result;
-            //     if (dependencyStatus == Firebase.DependencyStatus.Available) {
-            //         IsInitialized = true;
-            //         return true;
-            //     }
-            // });
-            
             return false;
         }
 
@@ -38,18 +28,6 @@ namespace Services.Account.Providers
         {
             Debug.LogWarning("[FirebaseAccountProvider] Not implemented yet");
             await UniTask.Yield();
-            
-            // TODO: Implement Firebase anonymous auth
-            // var auth = Firebase.Auth.FirebaseAuth.DefaultInstance;
-            // var result = await auth.SignInAnonymouslyAsync();
-            // if (result != null) {
-            //     IsSignedIn = true;
-            //     PlayerId = result.UserId;
-            //     PlayerName = result.DisplayName;
-            //     OnSignInSuccess?.Invoke(PlayerId);
-            //     return true;
-            // }
-            
             return false;
         }
 
@@ -57,18 +35,6 @@ namespace Services.Account.Providers
         {
             Debug.LogWarning("[FirebaseAccountProvider] Not implemented yet");
             await UniTask.Yield();
-            
-            // TODO: Implement Firebase email/password auth
-            // var auth = Firebase.Auth.FirebaseAuth.DefaultInstance;
-            // var result = await auth.SignInWithEmailAndPasswordAsync(email, password);
-            // if (result != null) {
-            //     IsSignedIn = true;
-            //     PlayerId = result.UserId;
-            //     PlayerName = result.DisplayName;
-            //     OnSignInSuccess?.Invoke(PlayerId);
-            //     return true;
-            // }
-            
             return false;
         }
         
@@ -76,11 +42,6 @@ namespace Services.Account.Providers
         {
             Debug.LogWarning("[FirebaseAccountProvider] Not implemented yet");
             await UniTask.Yield();
-    
-            // TODO: Implement Firebase account creation
-            // var auth = Firebase.Auth.FirebaseAuth.DefaultInstance;
-            // var result = await auth.CreateUserWithEmailAndPasswordAsync(email, password);
-    
             return false;
         }
 
@@ -95,14 +56,6 @@ namespace Services.Account.Providers
         public void SignOut()
         {
             Debug.LogWarning("[FirebaseAccountProvider] Not implemented yet");
-            
-            // TODO: Implement Firebase sign out
-            // var auth = Firebase.Auth.FirebaseAuth.DefaultInstance;
-            // auth.SignOut();
-            // IsSignedIn = false;
-            // PlayerId = null;
-            // PlayerName = null;
-            // OnSignOutSuccess?.Invoke();
         }
 
         public void ClearSessionToken()
@@ -117,7 +70,6 @@ namespace Services.Account.Providers
 
         public void Cleanup()
         {
-            
         }
     }
 }

@@ -8,6 +8,8 @@ namespace Services.Account.Providers
     {
         public event Action<string> OnSignInSuccess;
         public event Action<string> OnSignInFailed;
+        event Action<string> OnSignUpSuccess;
+        event Action<string> OnSignUpFailed; 
         public event Action OnSignOutSuccess;
 
         // Properties

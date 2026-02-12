@@ -97,7 +97,7 @@ namespace Services.Matchmaking
                         _currentLobby.Data.TryGetValue("state", out var state) &&
                         state.Value == "starting")
                     {
-                        LoadingService.Instance.LoadScene("Game_Scene");
+                        //LoadingService.Instance.LoadScene("Game_Scene");
                         break;
                     }
                 }
