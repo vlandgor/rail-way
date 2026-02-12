@@ -129,47 +129,5 @@ namespace Services.Loading
                 await curtain.Hide();
             }
         }
-
-        /// <summary>
-        /// Load the app on first launch with predefined operations
-        /// </summary>
-        public async UniTask LoadApp(Queue<ILoadingOperation> initialOperations = null)
-        {
-            await initialLoadingCurtains.Show();
-
-            if (initialOperations != null && initialOperations.Count > 0)
-            {
-                int totalOps = initialOperations.Count;
-                int currentOp = 0;
-
-                while (initialOperations.Count > 0)
-                {
-                    ILoadingOperation operation = initialOperations.Dequeue();
-
-                    Progress<float> progress = new Progress<float>(p =>
-                    {
-                        float overallProgress = (currentOp + p) / totalOps;
-                        initialLoadingCurtains.UpdateProgress(overallProgress, operation.Description);
-                    });
-
-                    try
-                    {
-                        await operation.Execute(progress);
-                    }
-                    catch (Exception ex)
-                    {
-                        Debug.LogError($"App loading operation '{operation.Description}' failed: {ex.Message}");
-                        throw;
-                    }
-
-                    currentOp++;
-                }
-
-                initialLoadingCurtains.UpdateProgress(1f, "Ready!");
-                await UniTask.Delay(TimeSpan.FromSeconds(0.3f));
-            }
-
-            await initialLoadingCurtains.Hide();
-        }
     }
 }

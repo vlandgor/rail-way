@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 namespace Services.Utilities
@@ -53,7 +54,7 @@ namespace Services.Utilities
             }
         }
 
-        public virtual void Initialize()
+        public async virtual UniTask Initialize()
         {
             Debug.Log($"[{typeof(T).Name}]: Service Initialized");
         }

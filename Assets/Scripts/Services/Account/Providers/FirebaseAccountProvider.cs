@@ -11,6 +11,7 @@ namespace Services.Account.Providers
         public event Action<string> OnSignUpSuccess;
         public event Action<string> OnSignUpFailed;
         public event Action OnSignOutSuccess;
+        public event Action OnSignOutFailed;
 
         public bool IsSignedIn { get; private set; }
         public string PlayerId { get; private set; }

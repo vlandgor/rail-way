@@ -16,73 +16,40 @@ namespace Services.Account
     {
         public event Action<string> OnSignInSuccess
         {
-            add
-            {
-                if (_provider != null)
-                    _provider.OnSignInSuccess += value;
-            }
-            remove
-            {
-                if (_provider != null)
-                    _provider.OnSignInSuccess -= value;
-            }
+            add => _provider.OnSignInSuccess += value;
+            remove => _provider.OnSignInSuccess -= value;
         }
         public event Action<string> OnSignInFailed
         {
-            add
-            {
-                if (_provider != null)
-                    _provider.OnSignInFailed += value;
-            }
-            remove
-            {
-                if (_provider != null)
-                    _provider.OnSignInFailed -= value;
-            }
+            add => _provider.OnSignInFailed += value;
+            remove => _provider.OnSignInFailed -= value;
         }
         public event Action<string> OnSignUpSuccess
         {
-            add
-            {
-                if (_provider != null)
-                    _provider.OnSignUpSuccess += value;
-            }
-            remove
-            {
-                if (_provider != null)
-                    _provider.OnSignUpSuccess -= value;
-            }
+            add => _provider.OnSignUpSuccess += value;
+            remove => _provider.OnSignUpSuccess -= value;
         }
         public event Action<string> OnSignUpFailed
         {
-            add
-            {
-                if (_provider != null)
-                    _provider.OnSignUpFailed += value;
-            }
-            remove
-            {
-                if (_provider != null)
-                    _provider.OnSignUpFailed -= value;
-            }
+            add => _provider.OnSignUpFailed += value;
+            remove => _provider.OnSignUpFailed -= value;
         }
         public event Action OnSignOutSuccess
         {
-            add
-            {
-                if (_provider != null)
-                    _provider.OnSignOutSuccess += value;
-            }
-            remove
-            {
-                if (_provider != null)
-                    _provider.OnSignOutSuccess -= value;
-            }
+            add => _provider.OnSignOutSuccess += value;
+            remove => _provider.OnSignOutSuccess -= value;
         }
+        public event Action OnSignOutFailed
+        {
+            add => _provider.OnSignOutFailed += value;
+            remove => _provider.OnSignOutFailed -= value;
+        }
+        public event Action OnAuthorizationRequired;
         
         [SerializeField] private AccountProviderType _providerType = AccountProviderType.Ugs;
 
         private IAccountProvider _provider;
+        private UniTaskCompletionSource _authCompletionSource;
         
         public bool IsSignedIn => _provider?.IsSignedIn ?? false;
         public string PlayerId => _provider?.PlayerId ?? string.Empty;
@@ -94,72 +61,122 @@ namespace Services.Account
             _provider?.Cleanup();
         }
 
-        public override void Initialize()
+        public override async UniTask Initialize()
         {
-            base.Initialize();
-            
-            InitializeProvider();
-            InitializeServiceAsync().Forget();
-        }
-
-        private async UniTaskVoid InitializeServiceAsync()
-        {
-            Debug.Log("[AccountService] Starting async initialization...");
-            bool success = await _provider.InitializeAsync();
-            
-            if (success)
+            if (IsInitialized)
             {
-                Debug.Log("[AccountService] Initialization completed successfully");
+                Debug.Log("[AccountService] Already initialized");
+                return;
             }
-            else
-            {
-                Debug.LogError("[AccountService] Initialization failed");
-            }
+            
+            await base.Initialize();
+            await InitializeProvider();
         }
-
-        public void SwitchProvider(AccountProviderType newProviderType)
+        
+        public UniTask<bool> TryAutoAuthorize()
         {
-            if (_providerType == newProviderType)
+            Debug.Log("[AccountService] Checking auto-authorization...");
+            
+            if (!IsInitialized)
             {
-                Debug.LogWarning($"[AccountService] Already using {newProviderType} provider");
+                Debug.LogError("[AccountService] Service not initialized!");
+                return UniTask.FromResult(false);
+            }
+
+            if (IsSignedIn)
+            {
+                Debug.Log($"[AccountService] Auto-authorization successful! User: {PlayerId}");
+                return UniTask.FromResult(true);
+            }
+
+            Debug.Log("[AccountService] No saved session - manual sign-in required");
+            return UniTask.FromResult(false);
+        }
+        
+        public async UniTask RequireAuthorization()
+        {
+            if (IsSignedIn)
+            {
+                Debug.Log("[AccountService] Already authorized");
                 return;
             }
 
-            _provider?.Cleanup();
+            Debug.Log("[AccountService] Waiting for manual authorization...");
+            OnAuthorizationRequired?.Invoke();
+            _authCompletionSource = new UniTaskCompletionSource();
+            await _authCompletionSource.Task;
+            Debug.Log("[AccountService] Manual authorization completed");
+        }
+        
+        public void CompleteManualAuthorization()
+        {
+            if (!IsSignedIn)
+            {
+                Debug.LogWarning("[AccountService] CompleteManualAuthorization called but user not signed in");
+                return;
+            }
 
-            _providerType = newProviderType;
-            InitializeProvider();
-            
-            Debug.Log($"[AccountService] Switched to {newProviderType} provider");
+            Debug.Log("[AccountService] Completing manual authorization...");
+            _authCompletionSource?.TrySetResult();
+            _authCompletionSource = null;
         }
 
-        public UniTask<bool> InitializeAsync() => _provider.InitializeAsync();
         public UniTask<bool> SignInAnonymouslyAsync() => _provider.SignInAnonymouslyAsync();
-        public UniTask<bool> SignInWithEmailPasswordAsync(string email, string password) => _provider.SignInWithEmailPasswordAsync(email, password);
-        public UniTask<bool> SignUpWithEmailPasswordAsync(string email, string password) => _provider.SignUpWithEmailPasswordAsync(email, password);
-        public UniTask<bool> SignInWithUnityPlayerAccountAsync() => _provider.SignInWithUnityPlayerAccountAsync();
+        
+        public async UniTask<bool> SignInWithEmailPasswordAsync(string email, string password)
+        {
+            bool success = await _provider.SignInWithEmailPasswordAsync(email, password);
+            if (success) CompleteManualAuthorization();
+            return success;
+        }
+        
+        public async UniTask<bool> SignUpWithEmailPasswordAsync(string email, string password)
+        {
+            bool success = await _provider.SignUpWithEmailPasswordAsync(email, password);
+            
+            if (success)
+            {
+                success = await _provider.SignInWithEmailPasswordAsync(email, password);
+                if (success) CompleteManualAuthorization();
+            }
+            
+            return success;
+        }
+        
+        public async UniTask<bool> SignInWithUnityPlayerAccountAsync()
+        {
+            bool success = await _provider.SignInWithUnityPlayerAccountAsync();
+            if (success) CompleteManualAuthorization();
+            return success;
+        }
+        
         public void SignOut() => _provider.SignOut();
         public void ClearSessionToken() => _provider.ClearSessionToken();
         public string GetPlayerInfo() => _provider.GetPlayerInfo();
         
-        private void InitializeProvider()
+        private async UniTask InitializeProvider()
         {
             switch (_providerType)
             {
                 case AccountProviderType.Ugs:
                     _provider = new UgsAccountProvider();
-                    Debug.Log("[AccountService] Using UGS Account Provider");
                     break;
                 
                 case AccountProviderType.Firebase:
                     _provider = new FirebaseAccountProvider();
-                    Debug.Log("[AccountService] Using Firebase Account Provider");
                     break;
                 
                 default:
                     Debug.LogError($"[AccountService] Unknown provider type: {_providerType}");
                     _provider = new UgsAccountProvider();
                     break;
+            }
+            
+            bool success = await _provider.InitializeAsync();
+            
+            if (success && IsSignedIn)
+            {
+                Debug.Log($"[AccountService] Session restored for user: {PlayerId}");
             }
         }
     }

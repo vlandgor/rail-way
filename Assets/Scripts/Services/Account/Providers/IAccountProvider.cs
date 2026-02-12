@@ -11,6 +11,7 @@ namespace Services.Account.Providers
         event Action<string> OnSignUpSuccess;
         event Action<string> OnSignUpFailed; 
         public event Action OnSignOutSuccess;
+        public event Action OnSignOutFailed;
 
         // Properties
         public bool IsSignedIn { get; }

@@ -3,20 +3,20 @@ using Cysharp.Threading.Tasks;
 
 namespace Services.Loading.Operations
 {
-    public class ServiceInitializationOperation : ILoadingOperation
+    public class InitializeServiceOperation : ILoadingOperation
     {
         private readonly Func<IProgress<float>, UniTask> _initializeAction;
         private readonly string _serviceName;
 
         public string Description => $"Initializing {_serviceName}...";
 
-        public ServiceInitializationOperation(string serviceName, Func<IProgress<float>, UniTask> initializeAction)
+        public InitializeServiceOperation(string serviceName, Func<IProgress<float>, UniTask> initializeAction)
         {
             _serviceName = serviceName;
             _initializeAction = initializeAction;
         }
 
-        public ServiceInitializationOperation(string serviceName, Func<UniTask> initializeAction)
+        public InitializeServiceOperation(string serviceName, Func<UniTask> initializeAction)
         {
             _serviceName = serviceName;
             _initializeAction = async (progress) =>

@@ -15,6 +15,7 @@ namespace Services.Account.Providers
         public event Action<string> OnSignUpSuccess;
         public event Action<string> OnSignUpFailed;
         public event Action OnSignOutSuccess;
+        public event Action OnSignOutFailed;
 
         // Properties
         public bool IsSignedIn => IsInitialized && AuthenticationService.Instance.IsSignedIn;
@@ -23,7 +24,6 @@ namespace Services.Account.Providers
         public bool IsInitialized { get; private set; }
 
         private bool _eventsSubscribed;
-        private UniTaskCompletionSource<bool> _initializationTask;
 
         public UgsAccountProvider()
         {
@@ -48,64 +48,36 @@ namespace Services.Account.Providers
                 return true;
             }
 
-            if (_initializationTask != null)
-            {
-                Debug.Log("[UgsAccountProvider] Initialization already in progress, waiting...");
-                return await _initializationTask.Task;
-            }
-
-            _initializationTask = new UniTaskCompletionSource<bool>();
-
             try
             {
-                Debug.Log("[UgsAccountProvider] Initializing Unity Services...");
+                Debug.Log("[UgsAccountProvider] Initializing provider...");
                 
-                var currentState = UnityServices.State;
-                Debug.Log($"[UgsAccountProvider] Unity Services current state: {currentState}");
+                // UGS should already be initialized by InitializeUgsOperation
+                ServicesInitializationState currentState = UnityServices.State;
                 
-                if (currentState == ServicesInitializationState.Uninitialized)
+                if (currentState != ServicesInitializationState.Initialized)
                 {
-                    await UnityServices.InitializeAsync();
-                }
-                else if (currentState == ServicesInitializationState.Initializing)
-                {
-                    Debug.Log("[UgsAccountProvider] Unity Services is initializing, waiting...");
-                    int maxWaitSeconds = 30;
-                    int waitedSeconds = 0;
-                    
-                    while (UnityServices.State == ServicesInitializationState.Initializing && waitedSeconds < maxWaitSeconds)
-                    {
-                        await UniTask.Delay(100);
-                        waitedSeconds++;
-                    }
-                    
-                    if (UnityServices.State != ServicesInitializationState.Initialized)
-                    {
-                        throw new Exception($"Unity Services failed to initialize within {maxWaitSeconds} seconds. Current state: {UnityServices.State}");
-                    }
-                }
-                
-                if (UnityServices.State != ServicesInitializationState.Initialized)
-                {
-                    throw new Exception($"Unity Services is not in initialized state. Current state: {UnityServices.State}");
+                    Debug.LogError($"[UgsAccountProvider] Unity Services not initialized! State: {currentState}");
+                    Debug.LogError("[UgsAccountProvider] Make sure InitializeUgsOperation runs before AccountService initialization");
+                    return false;
                 }
                 
                 IsInitialized = true;
                 SubscribeToEvents();
                 
-                Debug.Log("[UgsAccountProvider] Unity Services initialized successfully");
-                _initializationTask.TrySetResult(true);
+                // Check if user was already signed in (session restored by UGS)
+                if (IsSignedIn)
+                {
+                    Debug.Log($"[UgsAccountProvider] Session automatically restored for user: {PlayerId}");
+                }
+                
+                Debug.Log("[UgsAccountProvider] Provider initialized successfully");
                 return true;
             }
             catch (Exception e)
             {
-                Debug.LogError($"[UgsAccountProvider] Failed to initialize Unity Services: {e.Message}\n{e.StackTrace}");
-                _initializationTask.TrySetResult(false);
+                Debug.LogError($"[UgsAccountProvider] Failed to initialize provider: {e.Message}\n{e.StackTrace}");
                 return false;
-            }
-            finally
-            {
-                _initializationTask = null;
             }
         }
 
@@ -144,8 +116,11 @@ namespace Services.Account.Providers
 
         public async UniTask<bool> SignInAnonymouslyAsync()
         {
-            if (!await EnsureInitialized())
+            if (!IsInitialized)
+            {
+                Debug.LogError("[UgsAccountProvider] Provider not initialized");
                 return false;
+            }
 
             if (IsSignedIn)
             {
@@ -169,8 +144,11 @@ namespace Services.Account.Providers
 
         public async UniTask<bool> SignInWithEmailPasswordAsync(string email, string password)
         {
-            if (!await EnsureInitialized())
+            if (!IsInitialized)
+            {
+                Debug.LogError("[UgsAccountProvider] Provider not initialized");
                 return false;
+            }
 
             if (IsSignedIn)
             {
@@ -201,8 +179,11 @@ namespace Services.Account.Providers
         
         public async UniTask<bool> SignUpWithEmailPasswordAsync(string email, string password)
         {
-            if (!await EnsureInitialized())
+            if (!IsInitialized)
+            {
+                Debug.LogError("[UgsAccountProvider] Provider not initialized");
                 return false;
+            }
 
             if (IsSignedIn)
             {
@@ -223,8 +204,6 @@ namespace Services.Account.Providers
                 await AuthenticationService.Instance.SignUpWithUsernamePasswordAsync(email, password);
                 
                 Debug.Log("[UgsAccountProvider] Account created successfully!");
-                
-                // Trigger sign-up success (NOT sign-in success)
                 OnSignUpSuccess?.Invoke(PlayerId);
                 return true;
             }
@@ -238,12 +217,10 @@ namespace Services.Account.Providers
 
         public async UniTask<bool> SignInWithUnityPlayerAccountAsync()
         {
-            Debug.Log("[UgsAccountProvider] SignInWithUnityPlayerAccountAsync called");
-            
-            if (!await EnsureInitialized())
+            if (!IsInitialized)
             {
-                Debug.LogError("[UgsAccountProvider] Failed to initialize before Unity Player Account sign in");
-                OnSignInFailed?.Invoke("Failed to initialize Unity Services");
+                Debug.LogError("[UgsAccountProvider] Provider not initialized");
+                OnSignInFailed?.Invoke("Provider not initialized");
                 return false;
             }
 
@@ -255,51 +232,36 @@ namespace Services.Account.Providers
 
             try
             {
-                Debug.Log("[UgsAccountProvider] Checking Unity Services state...");
-                Debug.Log($"[UgsAccountProvider] Unity Services State: {UnityServices.State}");
-                
-                if (UnityServices.State != ServicesInitializationState.Initialized)
-                {
-                    Debug.LogError($"[UgsAccountProvider] Unity Services not properly initialized. State: {UnityServices.State}");
-                    OnSignInFailed?.Invoke("Unity Services not initialized");
-                    return false;
-                }
-                
                 Debug.Log("[UgsAccountProvider] Starting Unity Player Account sign in...");
-                await UniTask.Delay(100);
                 
                 await PlayerAccountService.Instance.StartSignInAsync();
                 
-                Debug.Log($"[UgsAccountProvider] PlayerAccountService.IsSignedIn: {PlayerAccountService.Instance.IsSignedIn}");
-                
-                if (PlayerAccountService.Instance.IsSignedIn)
-                {
-                    Debug.Log("[UgsAccountProvider] Unity Player Account sign-in successful, getting access token...");
-                    
-                    string accessToken = PlayerAccountService.Instance.AccessToken;
-                    
-                    if (string.IsNullOrEmpty(accessToken))
-                    {
-                        Debug.LogError("[UgsAccountProvider] Failed to get access token from Player Account Service");
-                        OnSignInFailed?.Invoke("Failed to get access token");
-                        return false;
-                    }
-                    
-                    Debug.Log("[UgsAccountProvider] Signing in with Unity token...");
-                    await AuthenticationService.Instance.SignInWithUnityAsync(accessToken);
-                    
-                    return true;
-                }
-                else
+                if (!PlayerAccountService.Instance.IsSignedIn)
                 {
                     Debug.LogError("[UgsAccountProvider] Unity Player Account sign-in was cancelled or failed");
                     OnSignInFailed?.Invoke("Unity Player Account sign-in cancelled or failed");
                     return false;
                 }
+                
+                Debug.Log("[UgsAccountProvider] Unity Player Account sign-in successful, getting access token...");
+                
+                string accessToken = PlayerAccountService.Instance.AccessToken;
+                
+                if (string.IsNullOrEmpty(accessToken))
+                {
+                    Debug.LogError("[UgsAccountProvider] Failed to get access token from Player Account Service");
+                    OnSignInFailed?.Invoke("Failed to get access token");
+                    return false;
+                }
+                
+                Debug.Log("[UgsAccountProvider] Signing in with Unity token...");
+                await AuthenticationService.Instance.SignInWithUnityAsync(accessToken);
+                
+                return true;
             }
             catch (Exception e)
             {
-                Debug.LogError($"[UgsAccountProvider] Unexpected error during Unity Player Account sign in: {e.Message}\n{e.StackTrace}");
+                Debug.LogError($"[UgsAccountProvider] Unity Player Account sign in failed: {e.Message}\n{e.StackTrace}");
                 OnSignInFailed?.Invoke(e.Message);
                 return false;
             }
@@ -326,6 +288,7 @@ namespace Services.Account.Providers
             catch (Exception e)
             {
                 Debug.LogError($"[UgsAccountProvider] Error during sign out: {e.Message}");
+                OnSignOutFailed?.Invoke();
             }
         }
 
@@ -351,17 +314,6 @@ namespace Services.Account.Providers
             return $"PlayerId: {PlayerId}\nPlayerName: {PlayerName}\nIsSignedIn: {IsSignedIn}";
         }
 
-        private async UniTask<bool> EnsureInitialized()
-        {
-            if (IsInitialized && UnityServices.State == ServicesInitializationState.Initialized)
-            {
-                return true;
-            }
-            
-            Debug.LogWarning("[UgsAccountProvider] Service not properly initialized. Initializing now...");
-            return await InitializeAsync();
-        }
-
         private void OnSignedIn()
         {
             Debug.Log($"[UgsAccountProvider] ✓ Signed in successfully! PlayerId: {PlayerId}");
@@ -380,7 +332,7 @@ namespace Services.Account.Providers
             OnSignInFailed?.Invoke(exception.Message);
         }
 
-        private async void OnSessionExpired()
+        private void OnSessionExpired()
         {
             Debug.LogWarning("[UgsAccountProvider] Session expired. User needs to sign in again.");
             OnSignInFailed?.Invoke("Session expired. Please sign in again.");

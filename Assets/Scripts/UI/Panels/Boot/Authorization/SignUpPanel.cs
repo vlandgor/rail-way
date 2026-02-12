@@ -50,7 +50,7 @@ namespace UI.Panels.Boot.Authorization
             
             if (AccountService.Instance != null)
             {
-                AccountService.Instance.OnSignUpSuccess -= HandleSignUpSuccess;
+                AccountService.Instance.OnSignInSuccess -= HandleSignUpSuccess;
                 AccountService.Instance.OnSignUpFailed -= HandleSignUpFailed;
             }
         }
@@ -112,23 +112,16 @@ namespace UI.Panels.Boot.Authorization
                 _isProcessing = true;
                 SetButtonsInteractable(false);
 
-                Debug.Log($"[SignUpPanel] Creating account with email: {email}");
-        
-                if (!AccountService.Instance.IsInitialized)
-                {
-                    await AccountService.Instance.InitializeAsync();
-                }
-
                 bool success = await AccountService.Instance.SignUpWithEmailPasswordAsync(email, password);
 
                 if (!success)
                 {
-                    Debug.LogWarning("[SignUpPanel] Account creation failed");
+                    Debug.LogWarning("[SignUpPanel] Sign up failed");
                 }
             }
             catch (Exception e)
             {
-                Debug.LogError($"[SignUpPanel] Exception during sign up: {e.Message}");
+                Debug.LogError($"[SignUpPanel] Exception: {e.Message}");
                 ShowError("An unexpected error occurred. Please try again.");
             }
             finally
@@ -140,7 +133,7 @@ namespace UI.Panels.Boot.Authorization
 
         private void HandleSignUpSuccess(string playerId)
         {
-            Debug.Log($"[SignUpPanel] Account created successfully! Player ID: {playerId}");
+            Debug.Log($"[SignUpPanel] Account created and signed in! Player ID: {playerId}");
             HideError();
             
             // Clear input fields
@@ -148,14 +141,12 @@ namespace UI.Panels.Boot.Authorization
             _passwordInputField.text = "";
             _confirmPasswordInputField.text = "";
             
-            // Navigate to sign in panel
-            _signInPanel.Enable();
             Disable();
         }
 
         private void HandleSignUpFailed(string error)
         {
-            Debug.LogError($"[SignUpPanel] Account creation failed: {error}");
+            Debug.LogError($"[SignUpPanel] Sign up failed: {error}");
             ShowError(error);
         }
 
@@ -196,7 +187,7 @@ namespace UI.Panels.Boot.Authorization
         {
             try
             {
-                var addr = new System.Net.Mail.MailAddress(email);
+                System.Net.Mail.MailAddress addr = new System.Net.Mail.MailAddress(email);
                 return addr.Address == email;
             }
             catch

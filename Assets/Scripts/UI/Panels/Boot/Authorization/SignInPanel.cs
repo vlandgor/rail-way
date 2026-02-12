@@ -37,7 +37,8 @@ namespace UI.Panels.Boot.Authorization
             _continueAsGuestButton.onClick.AddListener(HandleContinueAsGuestButtonClicked);
             _forgotPasswordButton.onClick.AddListener(HandleForgotPasswordButtonClicked);
             _createAccountButton.onClick.AddListener(HandleCreateAccountButtonClicked);
-            
+
+            AccountService.Instance.OnAuthorizationRequired += HandleAuthorizationRequired;
             AccountService.Instance.OnSignInSuccess += HandleSignInSuccess;
             AccountService.Instance.OnSignInFailed += HandleSignInFailed;
             
@@ -59,6 +60,7 @@ namespace UI.Panels.Boot.Authorization
             
             if (AccountService.Instance != null)
             {
+                AccountService.Instance.OnAuthorizationRequired += HandleAuthorizationRequired;
                 AccountService.Instance.OnSignInSuccess -= HandleSignInSuccess;
                 AccountService.Instance.OnSignInFailed -= HandleSignInFailed;
             }
@@ -125,23 +127,16 @@ namespace UI.Panels.Boot.Authorization
                 _isProcessing = true;
                 SetButtonsInteractable(false);
 
-                Debug.Log($"[SignInPanel] Signing in with email: {email}");
-                
-                if (!AccountService.Instance.IsInitialized)
-                {
-                    await AccountService.Instance.InitializeAsync();
-                }
-
                 bool success = await AccountService.Instance.SignInWithEmailPasswordAsync(email, password);
 
                 if (!success)
                 {
-                    Debug.LogWarning("[SignInPanel] Sign in with email/password failed");
+                    Debug.LogWarning("[SignInPanel] Sign in failed");
                 }
             }
             catch (Exception e)
             {
-                Debug.LogError($"[SignInPanel] Exception during sign in: {e.Message}");
+                Debug.LogError($"[SignInPanel] Exception: {e.Message}");
                 ShowError("An unexpected error occurred. Please try again.");
             }
             finally
@@ -162,23 +157,16 @@ namespace UI.Panels.Boot.Authorization
                 _isProcessing = true;
                 SetButtonsInteractable(false);
 
-                Debug.Log("[SignInPanel] Signing in with Unity Player Account");
-                
-                if (!AccountService.Instance.IsInitialized)
-                {
-                    await AccountService.Instance.InitializeAsync();
-                }
-
                 bool success = await AccountService.Instance.SignInWithUnityPlayerAccountAsync();
 
                 if (!success)
                 {
-                    Debug.LogWarning("[SignInPanel] Sign in with Unity Player Account failed");
+                    Debug.LogWarning("[SignInPanel] Unity Player Account sign in failed");
                 }
             }
             catch (Exception e)
             {
-                Debug.LogError($"[SignInPanel] Exception during Unity Player Account sign in: {e.Message}");
+                Debug.LogError($"[SignInPanel] Exception: {e.Message}");
                 ShowError("Unity Player Account sign-in failed. Please try again.");
             }
             finally
@@ -199,13 +187,6 @@ namespace UI.Panels.Boot.Authorization
                 _isProcessing = true;
                 SetButtonsInteractable(false);
 
-                Debug.Log("[SignInPanel] Signing in anonymously");
-                
-                if (!AccountService.Instance.IsInitialized)
-                {
-                    await AccountService.Instance.InitializeAsync();
-                }
-
                 bool success = await AccountService.Instance.SignInAnonymouslyAsync();
 
                 if (!success)
@@ -215,7 +196,7 @@ namespace UI.Panels.Boot.Authorization
             }
             catch (Exception e)
             {
-                Debug.LogError($"[SignInPanel] Exception during anonymous sign in: {e.Message}");
+                Debug.LogError($"[SignInPanel] Exception: {e.Message}");
                 ShowError("Guest sign-in failed. Please try again.");
             }
             finally
@@ -224,13 +205,17 @@ namespace UI.Panels.Boot.Authorization
                 SetButtonsInteractable(true);
             }
         }
-
+        
+        private void HandleAuthorizationRequired()
+        {
+            Enable();
+        }
+        
         private void HandleSignInSuccess(string playerId)
         {
             Debug.Log($"[SignInPanel] Sign in successful! Player ID: {playerId}");
             HideError();
-            
-            // TODO: Navigate to main game or next screen
+            Disable();
         }
 
         private void HandleSignInFailed(string error)
@@ -279,7 +264,7 @@ namespace UI.Panels.Boot.Authorization
         {
             try
             {
-                var addr = new System.Net.Mail.MailAddress(email);
+                System.Net.Mail.MailAddress addr = new System.Net.Mail.MailAddress(email);
                 return addr.Address == email;
             }
             catch

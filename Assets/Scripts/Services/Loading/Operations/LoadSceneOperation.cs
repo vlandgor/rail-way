@@ -5,13 +5,13 @@ using UnityEngine.SceneManagement;
 
 namespace Services.Loading.Operations
 {
-    public class SceneLoadingOperation : ILoadingOperation
+    public class LoadSceneOperation : ILoadingOperation
     {
         private readonly string _sceneName;
     
         public string Description => $"Loading {_sceneName}...";
 
-        public SceneLoadingOperation(string sceneName)
+        public LoadSceneOperation(string sceneName)
         {
             _sceneName = sceneName;
         }

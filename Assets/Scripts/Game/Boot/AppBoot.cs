@@ -1,24 +1,27 @@
+using System.Collections.Generic;
 using Services.Account;
 using Services.Loading;
-using Services.Matchmaking;
+using Services.Loading.Curtains;
+using Services.Loading.Operations;
+using Unity.Services.Core;
 using UnityEngine;
 
 namespace Core.Boot
 {
     public class AppBoot : MonoBehaviour
     {
-        private void Start()
+        private async void Start()
         {
-            InitializeServices();
-
-            //LoadingService.Instance.LoadScene("Menu_Scene");
-        }
-
-        private void InitializeServices()
-        {
-            LoadingService.Instance.Initialize();
-            MatchmakingService.Instance.Initialize();
-            AccountService.Instance.Initialize();
+            Queue<ILoadingOperation> appLoadOperations = new Queue<ILoadingOperation>();
+            
+            appLoadOperations.Enqueue(new InitializeUgsOperation());
+            appLoadOperations.Enqueue(new InitializeServiceOperation("Loading Service", LoadingService.Instance.Initialize));
+            appLoadOperations.Enqueue(new InitializeServiceOperation("Account Service", AccountService.Instance.Initialize));
+            appLoadOperations.Enqueue(new AuthorizationOperation());
+            appLoadOperations.Enqueue(new DelayOperation(0.5f));
+            appLoadOperations.Enqueue(new LoadSceneOperation("Menu_Scene"));
+            
+            await LoadingService.Instance.Load(appLoadOperations, LoadingCurtainType.Initial);
         }
     }
 }
