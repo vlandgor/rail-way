@@ -50,7 +50,7 @@ namespace UI.Panels.Boot.Authorization
             
             if (AccountService.Instance != null)
             {
-                AccountService.Instance.OnSignInSuccess -= HandleSignUpSuccess;
+                AccountService.Instance.OnSignUpSuccess -= HandleSignUpSuccess;
                 AccountService.Instance.OnSignUpFailed -= HandleSignUpFailed;
             }
         }

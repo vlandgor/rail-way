@@ -3,10 +3,9 @@ using Services.Account;
 using Services.Loading;
 using Services.Loading.Curtains;
 using Services.Loading.Operations;
-using Unity.Services.Core;
 using UnityEngine;
 
-namespace Core.Boot
+namespace Game.Boot
 {
     public class AppBoot : MonoBehaviour
     {

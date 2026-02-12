@@ -14,36 +14,13 @@ namespace Services.Account
     
     public class AccountService : Singleton<AccountService>
     {
-        public event Action<string> OnSignInSuccess
-        {
-            add => _provider.OnSignInSuccess += value;
-            remove => _provider.OnSignInSuccess -= value;
-        }
-        public event Action<string> OnSignInFailed
-        {
-            add => _provider.OnSignInFailed += value;
-            remove => _provider.OnSignInFailed -= value;
-        }
-        public event Action<string> OnSignUpSuccess
-        {
-            add => _provider.OnSignUpSuccess += value;
-            remove => _provider.OnSignUpSuccess -= value;
-        }
-        public event Action<string> OnSignUpFailed
-        {
-            add => _provider.OnSignUpFailed += value;
-            remove => _provider.OnSignUpFailed -= value;
-        }
-        public event Action OnSignOutSuccess
-        {
-            add => _provider.OnSignOutSuccess += value;
-            remove => _provider.OnSignOutSuccess -= value;
-        }
-        public event Action OnSignOutFailed
-        {
-            add => _provider.OnSignOutFailed += value;
-            remove => _provider.OnSignOutFailed -= value;
-        }
+        // Own events that can be subscribed to before initialization
+        public event Action<string> OnSignInSuccess;
+        public event Action<string> OnSignInFailed;
+        public event Action<string> OnSignUpSuccess;
+        public event Action<string> OnSignUpFailed;
+        public event Action OnSignOutSuccess;
+        public event Action OnSignOutFailed;
         public event Action OnAuthorizationRequired;
         
         [SerializeField] private AccountProviderType _providerType = AccountProviderType.Ugs;
@@ -58,6 +35,7 @@ namespace Services.Account
 
         private void OnDestroy()
         {
+            UnsubscribeFromProvider();
             _provider?.Cleanup();
         }
 
@@ -174,10 +152,39 @@ namespace Services.Account
             
             bool success = await _provider.InitializeAsync();
             
-            if (success && IsSignedIn)
+            if (success)
             {
-                Debug.Log($"[AccountService] Session restored for user: {PlayerId}");
+                SubscribeToProvider();
+                
+                if (IsSignedIn)
+                {
+                    Debug.Log($"[AccountService] Session restored for user: {PlayerId}");
+                }
             }
+        }
+
+        private void SubscribeToProvider()
+        {
+            if (_provider == null) return;
+
+            _provider.OnSignInSuccess += (playerId) => OnSignInSuccess?.Invoke(playerId);
+            _provider.OnSignInFailed += (error) => OnSignInFailed?.Invoke(error);
+            _provider.OnSignUpSuccess += (playerId) => OnSignUpSuccess?.Invoke(playerId);
+            _provider.OnSignUpFailed += (error) => OnSignUpFailed?.Invoke(error);
+            _provider.OnSignOutSuccess += () => OnSignOutSuccess?.Invoke();
+            _provider.OnSignOutFailed += () => OnSignOutFailed?.Invoke();
+        }
+
+        private void UnsubscribeFromProvider()
+        {
+            if (_provider == null) return;
+
+            _provider.OnSignInSuccess -= (playerId) => OnSignInSuccess?.Invoke(playerId);
+            _provider.OnSignInFailed -= (error) => OnSignInFailed?.Invoke(error);
+            _provider.OnSignUpSuccess -= (playerId) => OnSignUpSuccess?.Invoke(playerId);
+            _provider.OnSignUpFailed -= (error) => OnSignUpFailed?.Invoke(error);
+            _provider.OnSignOutSuccess -= () => OnSignOutSuccess?.Invoke();
+            _provider.OnSignOutFailed -= () => OnSignOutFailed?.Invoke();
         }
     }
 }

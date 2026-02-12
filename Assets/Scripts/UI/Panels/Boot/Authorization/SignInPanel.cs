@@ -60,7 +60,7 @@ namespace UI.Panels.Boot.Authorization
             
             if (AccountService.Instance != null)
             {
-                AccountService.Instance.OnAuthorizationRequired += HandleAuthorizationRequired;
+                AccountService.Instance.OnAuthorizationRequired -= HandleAuthorizationRequired;
                 AccountService.Instance.OnSignInSuccess -= HandleSignInSuccess;
                 AccountService.Instance.OnSignInFailed -= HandleSignInFailed;
             }
@@ -69,6 +69,7 @@ namespace UI.Panels.Boot.Authorization
         private void HandleSignInButtonClicked()
         {
             SignInWithEmailPasswordAsync().Forget();
+            //HideError();
         }
         
         private void HandleSignInWithGoogleButtonClicked()
@@ -98,7 +99,7 @@ namespace UI.Panels.Boot.Authorization
         private async UniTaskVoid SignInWithEmailPasswordAsync()
         {
             if (_isProcessing) return;
-
+            
             HideError();
 
             string email = _emailInputField.text.Trim();
@@ -179,8 +180,6 @@ namespace UI.Panels.Boot.Authorization
         private async UniTaskVoid SignInAnonymouslyAsync()
         {
             if (_isProcessing) return;
-
-            HideError();
 
             try
             {
