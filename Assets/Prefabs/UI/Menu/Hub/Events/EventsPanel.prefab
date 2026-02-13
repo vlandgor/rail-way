@@ -1452,6 +1452,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1108361031859761146}
+  - component: {fileID: 2741096718533760988}
+  - component: {fileID: 8270118233793390204}
   - component: {fileID: 4763998770499481551}
   - component: {fileID: 1793662607872032634}
   - component: {fileID: 6329298288618096864}
@@ -1483,6 +1485,44 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!222 &2741096718533760988
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2378509404426805505}
+  m_CullTransparentMesh: 1
+--- !u!114 &8270118233793390204
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2378509404426805505}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0.87058824, g: 0.87058824, b: 0.8745098, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
 --- !u!114 &4763998770499481551
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1517,9 +1557,9 @@ CanvasGroup:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2378509404426805505}
   m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
+  m_Alpha: 0
+  m_Interactable: 0
+  m_BlocksRaycasts: 0
   m_IgnoreParentGroups: 0
 --- !u!114 &6329298288618096864
 MonoBehaviour:
@@ -1533,7 +1573,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8df794ca91ee45e18bc2877721a085a5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _enableOnStart: 1
+  _enableOnStart: 0
   _canvasGroup: {fileID: 1793662607872032634}
 --- !u!1 &3028436796624886360
 GameObject:
