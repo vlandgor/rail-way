@@ -1,4 +1,5 @@
 using System;
+using UI.Base;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,6 +10,7 @@ namespace UI.Panels.Menu.BottomMenu
         public event Action<BottomMenuCategory> OnSelected;
         
         [SerializeField] private BottomMenuCategory _bottomMenuCategory;
+        [SerializeField] private BasePanel _connectedPanel;
         
         [Space]
         [SerializeField] private Toggle _toggle;
@@ -40,7 +42,12 @@ namespace UI.Panels.Menu.BottomMenu
             
             if (isOn)
             {
+                _connectedPanel.Enable();
                 OnSelected?.Invoke(_bottomMenuCategory);
+            }
+            else
+            {
+                _connectedPanel.Disable();
             }
         }
     }

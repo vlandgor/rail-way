@@ -1392,6 +1392,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _enableOnStart: 1
   _canvasGroup: {fileID: 4320569060465486537}
+  _gameModesPanel: {fileID: 0}
   _customLobbyButton: {fileID: 2015193385252334166}
   _playButton: {fileID: 2138351548047841182}
   _gameModesButton: {fileID: 3710918088724693509}

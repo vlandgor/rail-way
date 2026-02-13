@@ -35,7 +35,7 @@ namespace UI.Panels.Menu.GameModes
 
         private void HandleCloseButtonClicked()
         {
-            
+            Disable();
         }
         
         private void GameModeOption_OnSelected(GameModeType gameModeType)
