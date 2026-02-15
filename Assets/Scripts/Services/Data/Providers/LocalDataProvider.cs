@@ -10,7 +10,7 @@ namespace Services.Data.Providers
     {
         private const string Extension = ".json";
 
-        public bool IsInitialized { get; private set; } = true; // Local provider is always ready
+        public bool IsInitialized { get; private set; }
 
         public static string GetRootFolderPath()
         {
@@ -27,6 +27,19 @@ namespace Services.Data.Providers
             return path;
         }
 
+        public UniTask InitializeAsync()
+        {
+            if (IsInitialized) return UniTask.CompletedTask;
+            
+            IsInitialized = true;
+            return UniTask.CompletedTask;
+        }
+
+        public void Cleanup()
+        {
+            // Nothing to cleanup for local provider
+        }
+
         public UniTask<bool> ExistsAsync(string key, CancellationToken ct = default)
         {
             return UniTask.FromResult(File.Exists(MakePath(key)));
@@ -34,6 +47,8 @@ namespace Services.Data.Providers
 
         public async UniTask SaveTextAsync(string key, string text, CancellationToken ct = default)
         {
+            if (!IsInitialized) return;
+
             var path = MakePath(key);
             var bytes = Encoding.UTF8.GetBytes(text ?? string.Empty);
             
@@ -42,14 +57,12 @@ namespace Services.Data.Providers
                 await fs.WriteAsync(bytes, 0, bytes.Length, ct);
                 await fs.FlushAsync(ct);
             }
-            
-#if UNITY_EDITOR
-            Debug.Log($"[LocalDataProvider] Saved → {path}");
-#endif
         }
 
         public async UniTask<string> LoadTextAsync(string key, CancellationToken ct = default)
         {
+            if (!IsInitialized) return null;
+
             var path = MakePath(key);
             if (!File.Exists(path)) return null;
             
@@ -62,13 +75,12 @@ namespace Services.Data.Providers
 
         public UniTask DeleteAsync(string key, CancellationToken ct = default)
         {
+            if (!IsInitialized) return UniTask.CompletedTask;
+
             var path = MakePath(key);
             if (File.Exists(path))
             {
                 File.Delete(path);
-#if UNITY_EDITOR
-                Debug.Log($"[LocalDataProvider] Deleted → {path}");
-#endif
             }
             return UniTask.CompletedTask;
         }

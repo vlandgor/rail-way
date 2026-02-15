@@ -1,6 +1,5 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using UnityEngine;
 
 namespace Services.Data.Providers
 {
@@ -8,35 +7,36 @@ namespace Services.Data.Providers
     {
         public bool IsInitialized { get; private set; }
 
-        public async UniTask InitializeAsync()
+        public UniTask InitializeAsync()
         {
-            // TODO: Initialize Firebase
-            Debug.LogWarning("[FirebaseDataProvider] Not yet implemented");
-            await UniTask.Yield();
+            if (IsInitialized) return UniTask.CompletedTask;
+            
             IsInitialized = false;
+            return UniTask.CompletedTask;
+        }
+
+        public void Cleanup()
+        {
+            // Nothing to cleanup
         }
 
         public UniTask<bool> ExistsAsync(string key, CancellationToken ct = default)
         {
-            Debug.LogWarning("[FirebaseDataProvider] Not yet implemented");
             return UniTask.FromResult(false);
         }
 
         public UniTask SaveTextAsync(string key, string text, CancellationToken ct = default)
         {
-            Debug.LogWarning("[FirebaseDataProvider] Not yet implemented");
             return UniTask.CompletedTask;
         }
 
         public UniTask<string> LoadTextAsync(string key, CancellationToken ct = default)
         {
-            Debug.LogWarning("[FirebaseDataProvider] Not yet implemented");
             return UniTask.FromResult<string>(null);
         }
 
         public UniTask DeleteAsync(string key, CancellationToken ct = default)
         {
-            Debug.LogWarning("[FirebaseDataProvider] Not yet implemented");
             return UniTask.CompletedTask;
         }
 

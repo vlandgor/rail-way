@@ -44,5 +44,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ecb900dae0764ac3b36a07cfeccdfeca, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  providerType: 0
+  providerType: 1
   prettyPrint: 1

@@ -17,7 +17,7 @@ namespace Services.Data
 
     public class DataService : Singleton<DataService>
     {
-        [SerializeField] private DataProviderType providerType = DataProviderType.Local;
+        [SerializeField] private DataProviderType _providerType = DataProviderType.Local;
         
         [Space]
         [SerializeField] private bool prettyPrint = true;
@@ -26,45 +26,52 @@ namespace Services.Data
         
         public bool IsInitialized => _provider?.IsInitialized ?? false;
 
-        public override async UniTask Initialize()
+        private void OnDestroy()
         {
-            await base.Initialize();
-            await InitializeProviderAsync();
+            _provider?.Cleanup();
         }
 
-        private async UniTask InitializeProviderAsync()
+        public override async UniTask Initialize()
         {
-            if (IsInitialized) return;
+            if (IsInitialized)
+            {
+                return;
+            }
+            
+            await base.Initialize();
+            await InitializeProvider();
+        }
 
-            switch (providerType)
+        private async UniTask InitializeProvider()
+        {
+            switch (_providerType)
             {
                 case DataProviderType.Local:
                     _provider = new LocalDataProvider();
                     break;
-
+                
                 case DataProviderType.UGS:
-                    var ugsProvider = new UnityCloudDataProvider();
-                    await ugsProvider.InitializeAsync();
-                    _provider = ugsProvider;
+                    _provider = new UgsDataProvider();
                     break;
-
+                
                 case DataProviderType.Firebase:
-                    var firebaseProvider = new FirebaseDataProvider();
-                    await firebaseProvider.InitializeAsync();
-                    _provider = firebaseProvider;
+                    _provider = new FirebaseDataProvider();
+                    break;
+                
+                default:
+                    _provider = new LocalDataProvider();
                     break;
             }
-
-            Debug.Log($"[DataService] Initialized with {providerType} provider");
+            
+            await _provider.InitializeAsync();
         }
 
 #if UNITY_EDITOR
         [ContextMenu("Open Saving Folder")]
         private void OpenFolderFromInspector()
         {
-            if (providerType != DataProviderType.Local)
+            if (_providerType != DataProviderType.Local)
             {
-                Debug.LogWarning($"[DataService] 'Open Folder' only works with Local provider");
                 return;
             }
 
@@ -77,30 +84,15 @@ namespace Services.Data
                     UseShellExecute = true
                 });
             }
-            else
-            {
-                Debug.LogWarning($"[DataService] Save folder does not exist: {folderPath}");
-            }
         }
 #endif
 
-        public void SetProvider(IDataProvider provider) => _provider = provider;
-
         public UniTask<bool> ExistsAsync(string key, CancellationToken ct = default)
-            => _provider != null ? _provider.ExistsAsync(key, ct) : UniTask.FromResult(false);
+            => _provider?.ExistsAsync(key, ct) ?? UniTask.FromResult(false);
 
         public async UniTask SaveJsonAsync<T>(string key, T data, CancellationToken ct = default)
         {
-            if (_provider == null) 
-            { 
-                Debug.LogWarning("[DataService] No provider set."); 
-                return; 
-            }
-            if (data == null) 
-            { 
-                Debug.LogWarning("[DataService] SaveJsonAsync called with null data."); 
-                return; 
-            }
+            if (_provider == null || data == null) return;
             
             var json = JsonUtility.ToJson(data, prettyPrint);
             await _provider.SaveTextAsync(key, json, ct);
@@ -108,11 +100,7 @@ namespace Services.Data
 
         public async UniTask<(bool success, T data)> TryLoadJsonAsync<T>(string key, CancellationToken ct = default)
         {
-            if (_provider == null)
-            {
-                Debug.LogWarning("[DataService] No provider set.");
-                return (false, default);
-            }
+            if (_provider == null) return (false, default);
 
             var json = await _provider.LoadTextAsync(key, ct);
             if (string.IsNullOrEmpty(json)) return (false, default);
@@ -122,9 +110,8 @@ namespace Services.Data
                 var data = JsonUtility.FromJson<T>(json);
                 return (!Equals(data, default(T)), data);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                Debug.LogError($"[DataService] Failed to parse JSON for key '{key}': {e}");
                 return (false, default);
             }
         }
@@ -136,7 +123,7 @@ namespace Services.Data
         }
 
         public UniTask DeleteAsync(string key, CancellationToken ct = default)
-            => _provider != null ? _provider.DeleteAsync(key, ct) : UniTask.CompletedTask;
+            => _provider?.DeleteAsync(key, ct) ?? UniTask.CompletedTask;
 
         public string GetAbsolutePath(string key) => _provider?.GetAbsolutePath(key);
     }
