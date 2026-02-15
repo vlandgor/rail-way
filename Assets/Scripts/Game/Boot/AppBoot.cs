@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Services.Account;
+using Services.Data;
 using Services.Loading;
 using Services.Loading.Curtains;
 using Services.Loading.Operations;
@@ -15,6 +16,7 @@ namespace Game.Boot
             
             appLoadOperations.Enqueue(new InitializeUgsOperation());
             appLoadOperations.Enqueue(new InitializeServiceOperation("Loading Service", LoadingService.Instance.Initialize));
+            appLoadOperations.Enqueue(new InitializeServiceOperation("Data Service" , DataService.Instance.Initialize));
             appLoadOperations.Enqueue(new InitializeServiceOperation("Account Service", AccountService.Instance.Initialize));
             appLoadOperations.Enqueue(new AuthorizationOperation());
             appLoadOperations.Enqueue(new DelayOperation(0.5f));
