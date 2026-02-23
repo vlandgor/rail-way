@@ -1,0 +1,18 @@
+{
+    "name": "Meta",
+    "rootNamespace": "",
+    "references": [
+        "GUID:c9c7159540adb451ca44a8526ffed0c8",
+        "GUID:39a00067d1ae447b5a355647645deb2d",
+        "GUID:f51ebe6a0ceec4240a699833d6309b23"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

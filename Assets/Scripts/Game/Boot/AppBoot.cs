@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Meta;
 using Services.Account;
 using Services.Data;
 using Services.Loading;
@@ -18,6 +19,7 @@ namespace Game.Boot
             appLoadOperations.Enqueue(new InitializeServiceOperation("Loading Service", LoadingService.Instance.Initialize));
             appLoadOperations.Enqueue(new InitializeServiceOperation("Data Service" , DataService.Instance.Initialize));
             appLoadOperations.Enqueue(new InitializeServiceOperation("Account Service", AccountService.Instance.Initialize));
+            appLoadOperations.Enqueue(new InitializeServiceOperation("Loading Meta", MetaManager.Instance.Initialize));
             appLoadOperations.Enqueue(new AuthorizationOperation());
             appLoadOperations.Enqueue(new DelayOperation(0.5f));
             appLoadOperations.Enqueue(new LoadSceneOperation("Menu_Scene"));
