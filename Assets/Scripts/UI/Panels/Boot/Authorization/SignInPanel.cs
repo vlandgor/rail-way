@@ -37,11 +37,11 @@ namespace UI.Panels.Boot.Authorization
             _continueAsGuestButton.onClick.AddListener(HandleContinueAsGuestButtonClicked);
             _forgotPasswordButton.onClick.AddListener(HandleForgotPasswordButtonClicked);
             _createAccountButton.onClick.AddListener(HandleCreateAccountButtonClicked);
-
+            
             AccountService.Instance.OnAuthorizationRequired += HandleAuthorizationRequired;
             AccountService.Instance.OnSignInSuccess += HandleSignInSuccess;
             AccountService.Instance.OnSignInFailed += HandleSignInFailed;
-            
+
             if (_errorMessageText != null)
             {
                 _errorMessageText.color = _errorTextColor;
@@ -69,7 +69,6 @@ namespace UI.Panels.Boot.Authorization
         private void HandleSignInButtonClicked()
         {
             SignInWithEmailPasswordAsync().Forget();
-            //HideError();
         }
         
         private void HandleSignInWithGoogleButtonClicked()
@@ -181,6 +180,9 @@ namespace UI.Panels.Boot.Authorization
         {
             if (_isProcessing) return;
 
+            // FIX: Added HideError at the start, consistent with other sign-in methods
+            HideError();
+
             try
             {
                 _isProcessing = true;
@@ -191,6 +193,7 @@ namespace UI.Panels.Boot.Authorization
                 if (!success)
                 {
                     Debug.LogWarning("[SignInPanel] Anonymous sign in failed");
+                    ShowError("Guest sign-in failed. Please try again.");
                 }
             }
             catch (Exception e)

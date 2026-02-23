@@ -98,7 +98,13 @@ namespace Services.Account
             _authCompletionSource = null;
         }
 
-        public UniTask<bool> SignInAnonymouslyAsync() => _provider.SignInAnonymouslyAsync();
+        // FIX: Was directly delegating to provider, never calling CompleteManualAuthorization
+        public async UniTask<bool> SignInAnonymouslyAsync()
+        {
+            bool success = await _provider.SignInAnonymouslyAsync();
+            if (success) CompleteManualAuthorization();
+            return success;
+        }
         
         public async UniTask<bool> SignInWithEmailPasswordAsync(string email, string password)
         {
