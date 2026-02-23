@@ -1,7 +1,6 @@
 using System;
 using Cysharp.Threading.Tasks;
 using Services.Account.Providers;
-using Services.Utilities;
 using UnityEngine;
 
 namespace Services.Account
@@ -12,7 +11,7 @@ namespace Services.Account
         Firebase
     }
     
-    public class AccountService : Singleton<AccountService>
+    public class AccountService : BaseService<AccountService>
     {
         // Own events that can be subscribed to before initialization
         public event Action<string> OnSignInSuccess;

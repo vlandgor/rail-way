@@ -3,7 +3,6 @@ using System.IO;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Services.Data.Providers;
-using Services.Utilities;
 using UnityEngine;
 
 namespace Services.Data
@@ -15,7 +14,7 @@ namespace Services.Data
         Firebase
     }
 
-    public class DataService : Singleton<DataService>
+    public class DataService : BaseService<DataService>
     {
         [SerializeField] private DataProviderType _providerType = DataProviderType.Local;
         

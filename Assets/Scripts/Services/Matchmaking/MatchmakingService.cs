@@ -1,7 +1,5 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Services.Loading;
-using Services.Utilities;
 using Unity.Services.Authentication;
 using Unity.Services.Core;
 using Unity.Services.Lobbies;
@@ -11,7 +9,7 @@ using UnityEngine.SceneManagement;
 
 namespace Services.Matchmaking
 {
-    public class MatchmakingService : Singleton<MatchmakingService>
+    public class MatchmakingService : BaseService<MatchmakingService>
     {
         private Lobby _currentLobby;
         private float _heartbeatTimer;

@@ -3,13 +3,11 @@ using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Services.Loading.Curtains;
 using Services.Loading.Operations;
-using Services.Utilities;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 namespace Services.Loading
 {
-    public class LoadingService : Singleton<LoadingService>
+    public class LoadingService : BaseService<LoadingService>
     {
         [Header("Curtain References")]
         [SerializeField] private InitialLoadingCurtains initialLoadingCurtains;

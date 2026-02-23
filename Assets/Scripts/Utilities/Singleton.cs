@@ -1,7 +1,6 @@
-using Cysharp.Threading.Tasks;
 using UnityEngine;
 
-namespace Services.Utilities
+namespace Utilities
 {
     public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
     {
@@ -52,11 +51,6 @@ namespace Services.Utilities
             {
                 Destroy(gameObject);
             }
-        }
-
-        public async virtual UniTask Initialize()
-        {
-            Debug.Log($"[{typeof(T).Name}]: Service Initialized");
         }
 
         protected virtual void OnApplicationQuit()
