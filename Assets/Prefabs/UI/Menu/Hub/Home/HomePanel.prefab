@@ -3322,6 +3322,10 @@ PrefabInstance:
       propertyPath: _enableOnStart
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 3139651746806422601, guid: bcf540d227501482e9837b2663c22c07, type: 3}
+      propertyPath: _playerNameText
+      value: 
+      objectReference: {fileID: 7277981783538408974}
     - target: {fileID: 3424996212496239011, guid: bcf540d227501482e9837b2663c22c07, type: 3}
       propertyPath: m_Name
       value: TopAccountPanel
@@ -3503,6 +3507,17 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 6659224793979687069, guid: bcf540d227501482e9837b2663c22c07, type: 3}
   m_PrefabInstance: {fileID: 6117508058159669512}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &7277981783538408974 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3595373291262476038, guid: bcf540d227501482e9837b2663c22c07, type: 3}
+  m_PrefabInstance: {fileID: 6117508058159669512}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &8893983376052578475 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3424996212496239011, guid: bcf540d227501482e9837b2663c22c07, type: 3}

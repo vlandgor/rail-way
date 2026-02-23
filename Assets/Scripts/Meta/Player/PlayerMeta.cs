@@ -10,6 +10,10 @@ namespace Meta.Player
         
         private PlayerData _data;
         
+        public string Id =>  _data.Id;
+        public string Name => _data.Name;
+        public int Level => _data.Level;
+        
         public async UniTask Initialize(CancellationToken ct = default)
         {
             _data = await DataService.Instance.LoadJsonOrDefaultAsync(SaveKey, new PlayerData(), ct);
