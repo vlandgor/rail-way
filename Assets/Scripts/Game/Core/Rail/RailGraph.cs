@@ -4,13 +4,15 @@ using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Splines;
 
-namespace Game.Rail
+namespace Game.Core.Rail
 {
     public class RailGraph : MonoBehaviour
     {
         [SerializeField] private SplineContainer splineContainer;
         
         private Dictionary<int, StopPoint> _stopPoints = new();
+        public  Dictionary<int, StopPoint> StopPoints => _stopPoints;
+        
         private List<RailSegment> _segments = new();
         private Dictionary<int, List<RailSegment>> _segmentsAtStop = new();
         

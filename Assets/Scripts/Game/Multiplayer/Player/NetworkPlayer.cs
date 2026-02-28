@@ -1,9 +1,9 @@
-using System;
 using Game.Core.Player;
+using Game.Core.Rail;
 using Unity.Netcode;
 using UnityEngine;
 
-namespace Game.Player
+namespace Game.Multiplayer.Player
 {
     public class NetworkPlayer : NetworkBehaviour
     {
@@ -21,7 +21,7 @@ namespace Game.Player
             }
         }
         
-        public void Spawn()
+        public void Spawn(StopPoint stopPoint)
         {
             
         }

@@ -3,10 +3,7 @@ using Utilities;
 
 namespace Game.Core.Player.Customization
 {
-    public class PlayerCustomizationData
-    {
-        
-    }
+
     
     public class PlayerCustomization : Singleton<PlayerCustomization>
     {

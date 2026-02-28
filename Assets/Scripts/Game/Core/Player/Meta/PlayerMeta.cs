@@ -6,21 +6,6 @@ using Utilities;
 
 namespace Game.Core.Player.Meta
 {
-    [Serializable]
-    public class PlayerMetaData
-    {
-        public string Id;
-        public string Name;
-        public int Level = 1;
-        public int Experience = 0;
-
-        public PlayerMetaData()
-        {
-            Id = Guid.NewGuid().ToString().Substring(0, 8);
-            Name = $"Player_{Id}";
-        }
-    }
-    
     public class PlayerMeta : Singleton<PlayerMeta>
     {
         private const string SaveKey = "player_meta_data";

@@ -1,4 +1,5 @@
 using System;
+using Game.Core.Rail;
 using Game.Rail;
 using Unity.Mathematics;
 using UnityEngine;

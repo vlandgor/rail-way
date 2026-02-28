@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Game.Events.CoinMadness
 {
-    public class CoinMadnessManager : MonoBehaviour
+    public class CoinMadnessSession : MonoBehaviour
     {
         
     }
