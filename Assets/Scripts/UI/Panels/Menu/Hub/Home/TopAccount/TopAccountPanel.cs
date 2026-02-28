@@ -1,5 +1,4 @@
-using Meta;
-using Meta.Player;
+using Game.Core.Player.Meta;
 using TMPro;
 using UI.Base;
 using UnityEngine;
@@ -13,14 +12,11 @@ namespace UI.Panels.Menu.Hub.Home.TopAccount
         [SerializeField] private TextMeshProUGUI _playerNameText;
         [SerializeField] private TextMeshProUGUI _playerLevelText;
         [SerializeField] private Button _settingsButton;
-        
-        private PlayerMeta _playerMeta;
 
         private void Start()
         {
             _settingsButton.onClick.AddListener(HandleSettingsButtonClicked);
 
-            _playerMeta = MetaManager.Instance.PlayerMeta;
             SetPlayerInfo();
         }
 
@@ -31,8 +27,8 @@ namespace UI.Panels.Menu.Hub.Home.TopAccount
 
         private void SetPlayerInfo()
         {
-            _playerNameText.text = _playerMeta.Name;
-            _playerLevelText.text = $"Level {_playerMeta.Level.ToString()}";
+            _playerNameText.text = PlayerMeta.Instance.Name;
+            _playerLevelText.text = $"Level {PlayerMeta.Instance.Level.ToString()}";
         }
 
         private void HandleSettingsButtonClicked()

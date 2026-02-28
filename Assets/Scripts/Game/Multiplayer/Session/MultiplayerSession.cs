@@ -1,20 +1,13 @@
-using Core.Player;
+using Game.Multiplayer.Player;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Core.Session
+namespace Game.Multiplayer.Session
 {
-    public class MultiplayerSession : NetworkBehaviour, IMultiplayerSession
+    public class MultiplayerSession : NetworkBehaviour
     {
-        [SerializeField] private PlayerSpawnManager playerSpawnManager;
-        
-        public static IMultiplayerSession Instance { get; private set; }
-
-        private void Awake()
-        {
-            Instance = this;
-        }
+        [SerializeField] private NetworkPlayerSpawner networkPlayerSpawner;
 
         public override void OnNetworkSpawn()
         {
@@ -33,8 +26,6 @@ namespace Core.Session
 
         public override void OnNetworkDespawn()
         {
-            if (Instance == (IMultiplayerSession)this) Instance = null;
-
             if (NetworkManager.Singleton != null)
             {
                 NetworkManager.Singleton.OnClientDisconnectCallback -= OnDisconnect;
@@ -48,7 +39,7 @@ namespace Core.Session
 
         private void OnClientConnected(ulong clientId)
         {
-            //playerSpawnManager.SpawnPlayer(clientId);
+            
         }
 
         private void OnDisconnect(ulong clientId)

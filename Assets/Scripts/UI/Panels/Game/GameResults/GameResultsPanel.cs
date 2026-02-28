@@ -59,10 +59,7 @@ namespace UI.Panels.Game.GameResults
 
         private void HandleHomeButtonClicked()
         {
-            if (MultiplayerSession.Instance != null)
-            {
-                MultiplayerSession.Instance.LeaveSession();
-            }
+
         }
     }
 }

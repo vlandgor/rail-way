@@ -7,9 +7,9 @@ using Unity.Services.Lobbies.Models;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace Services.Matchmaking
+namespace Game.Multiplayer
 {
-    public class MatchmakingService : BaseService<MatchmakingService>
+    public class MatchmakingService : MonoBehaviour
     {
         private Lobby _currentLobby;
         private float _heartbeatTimer;

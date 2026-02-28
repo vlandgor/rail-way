@@ -1,4 +1,5 @@
 using System;
+using Game.Core.Player;
 using Unity.Netcode;
 using UnityEngine;
 

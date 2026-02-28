@@ -2,7 +2,7 @@ using Game.Player.Behaviour;
 using Game.Rail;
 using UnityEngine;
 
-namespace Game.Player
+namespace Game.Core.Player
 {
     public class LocalPlayer : MonoBehaviour
     {

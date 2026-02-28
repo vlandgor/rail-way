@@ -4,7 +4,7 @@ using Utilities;
 
 namespace Services
 {
-    public class BaseService<T> : Singleton<T> where T : BaseService<T>
+    public class BaseService<T> : MonoSingleton<T> where T : BaseService<T>
     {
         public async virtual UniTask Initialize()
         {

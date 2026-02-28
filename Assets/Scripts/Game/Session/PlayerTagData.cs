@@ -1,6 +1,6 @@
 using Unity.Netcode;
 
-namespace Core.Utilities
+namespace Game.Session
 {
     public struct PlayerTagData : INetworkSerializable, System.IEquatable<PlayerTagData>
     {

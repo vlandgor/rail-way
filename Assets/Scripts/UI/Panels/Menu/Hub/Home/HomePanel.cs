@@ -1,4 +1,4 @@
-using Services.Matchmaking;
+using Game.Multiplayer;
 using UI.Base;
 using UI.Panels.Menu.GameModes;
 using UnityEngine;
@@ -38,7 +38,7 @@ namespace UI.Panels.Menu.Hub.Home
         private async void HandlePlayButtonClicked()
         {
             _playButton.interactable = false;
-            await MatchmakingService.Instance.PlayAsync();
+            //await MatchmakingService.Instance.PlayAsync();
         }
         
         private void HandleGameModesButtonClicked()

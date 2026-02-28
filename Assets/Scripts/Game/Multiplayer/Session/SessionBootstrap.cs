@@ -1,14 +1,14 @@
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
-using Services.Matchmaking;
 using Unity.Netcode;
 using Unity.Services.Lobbies.Models;
 using UnityEngine;
 
-namespace Core.Session
+namespace Game.Multiplayer.Session
 {
     public class SessionBootstrap : MonoBehaviour
     {
+        [SerializeField] private MatchmakingService _matchmakingService;
         //[SerializeField] private Rail.RailSplineMap railSplineMap;
 
         private async void Start()
@@ -18,7 +18,7 @@ namespace Core.Session
 
         private async UniTask InitializeSession()
         {
-            var matchmaking = MatchmakingService.Instance;
+            var matchmaking = _matchmakingService;
 
             if (matchmaking == null)
             {

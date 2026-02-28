@@ -1,10 +1,8 @@
-using System.Collections.Generic;
-using Unity.Netcode;
 using UnityEngine;
 
-namespace Core.Player
+namespace Game.Multiplayer.Player
 {
-    public class PlayerSpawnManager : MonoBehaviour
+    public class NetworkPlayerSpawner : MonoBehaviour
     {
         // [Header("Dependencies")]
         // [SerializeField] private RailSplineMap _railSplineMap;
