@@ -1,4 +1,5 @@
 using Game.Multiplayer;
+using Game.Multiplayer.Matchmaking;
 using UI.Base;
 using UI.Panels.Menu.GameModes;
 using UnityEngine;
@@ -15,6 +16,8 @@ namespace UI.Panels.Menu.Hub.Home
         [SerializeField] private Button _customLobbyButton;
         [SerializeField] private Button _playButton;
         [SerializeField] private Button _gameModesButton;
+
+        private MatchmakingCoordinator _matchmakingCoordinator = new();
 
         private void Start()
         {
@@ -38,7 +41,7 @@ namespace UI.Panels.Menu.Hub.Home
         private async void HandlePlayButtonClicked()
         {
             _playButton.interactable = false;
-            //await MatchmakingService.Instance.PlayAsync();
+            await _matchmakingCoordinator.StartMatchmaking();
         }
         
         private void HandleGameModesButtonClicked()

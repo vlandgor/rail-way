@@ -6,11 +6,10 @@ using Game.Multiplayer.Matchmaking.Providers;
 using Services.Loading;
 using Services.Loading.Operations;
 using UnityEngine;
-using Utilities;
 
 namespace Game.Multiplayer.Matchmaking
 {
-    public class MatchmakingCoordinator : Singleton<MatchmakingCoordinator>
+    public class MatchmakingCoordinator
     {
         private readonly IMatchmakingProvider _provider = new UnityLobbyProvider();
         
