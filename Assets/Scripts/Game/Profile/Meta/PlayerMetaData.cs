@@ -2,7 +2,7 @@ using System;
 
 namespace Game.Core.Player.Meta
 {
-    public interface IRemovePlayerMetaData
+    public interface IRemotePlayerMetaData
     {
         public string Id { get; }
         public string Name { get; }
@@ -10,7 +10,7 @@ namespace Game.Core.Player.Meta
     }
     
     [Serializable]
-    public class PlayerMetaData : IRemovePlayerMetaData
+    public class PlayerMetaData : IRemotePlayerMetaData
     {
         public string Id { get; private set; }
         public string Name { get; private set; }

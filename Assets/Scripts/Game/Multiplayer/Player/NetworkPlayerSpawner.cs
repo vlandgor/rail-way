@@ -16,7 +16,7 @@ namespace Game.Multiplayer.Player
         
         private readonly Dictionary<ulong, NetworkPlayer> _players = new();
         
-        public void SpawnPlayer(ulong clientId, IRemovePlayerMetaData playerMetaData, IRemotePlayerCustomizationData playerCustomizationData)
+        public void SpawnPlayer(ulong clientId, IRemotePlayerMetaData playerMetaData, IRemotePlayerCustomizationData playerCustomizationData)
         {
             if (!NetworkManager.Singleton.IsServer)
                 return;

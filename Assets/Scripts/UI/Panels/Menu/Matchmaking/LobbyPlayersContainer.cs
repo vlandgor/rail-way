@@ -35,7 +35,7 @@ namespace UI.Panels.Menu.Matchmaking
             {
                 if (!panel.IsOccupied)
                 {
-                    panel.SetPlayerPanelActive(null, player.playerName);
+                    panel.SetPlayerPanelActive(null, player.playerId); //TODO: Change it to use PlayerName
                     _activePlayers.Add(player.playerId, panel);
                     return;
                 }
