@@ -59,12 +59,12 @@ namespace UI.Panels.Menu.Matchmaking
         
         private void MatchmakingSearch_OnPlayerJoined(SearchPlayer searchPlayer)
         {
-            _lobbyPlayersContainer.AddPlayer(searchPlayer);
+            _lobbyPlayersContainer.SyncPlayers(_matchmakingSearch.GetCurrentPlayers());
         }
 
         private void MatchmakingSearch_OnPlayerLeft(string playerId)
         {
-            _lobbyPlayersContainer.RemovePlayer(playerId);
+            _lobbyPlayersContainer.SyncPlayers(_matchmakingSearch.GetCurrentPlayers());
         }
     }
 }

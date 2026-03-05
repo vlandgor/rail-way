@@ -27,27 +27,20 @@ namespace UI.Panels.Menu.Matchmaking
             HandleScrollRectValueChanged(Vector2.zero);
         }
 
-        public void AddPlayer(SearchPlayer player)
+        public void SyncPlayers(IEnumerable<SearchPlayer> players)
         {
-            if (_activePlayers.ContainsKey(player.playerId)) return;
-
             foreach (var panel in _pool)
             {
-                if (!panel.IsOccupied)
-                {
-                    panel.SetPlayerPanelActive(null, player.playerId); //TODO: Change it to use PlayerName
-                    _activePlayers.Add(player.playerId, panel);
-                    return;
-                }
-            }
-        }
-
-        public void RemovePlayer(string playerId)
-        {
-            if (_activePlayers.TryGetValue(playerId, out LobbyPlayerPanel panel))
-            {
                 panel.SetPlayerPanelInactive();
-                _activePlayers.Remove(playerId);
+            }
+
+            int index = 0;
+            foreach (var player in players)
+            {
+                if (index >= _pool.Count) break;
+        
+                _pool[index].SetPlayerPanelActive(null, player.playerId); //TODO: change to player name
+                index++;
             }
         }
 

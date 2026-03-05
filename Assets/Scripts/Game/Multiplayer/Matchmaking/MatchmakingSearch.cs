@@ -61,6 +61,8 @@ namespace Game.Multiplayer.Matchmaking
             await _provider.CancelAsync();
             _isMatchmaking = false;
         }
+        
+        public IEnumerable<SearchPlayer> GetCurrentPlayers() => _players.Values;
 
         private async UniTask ProcessMatchResult(SearchResult result)
         {
@@ -81,16 +83,14 @@ namespace Game.Multiplayer.Matchmaking
         
         private void Provider_OnPlayerJoined(SearchPlayer player)
         {
-            _players.TryAdd(player.playerId, player);
-            
+            _players[player.playerId] = player;
             OnPlayerJoined?.Invoke(player);
         }
 
         private void Provider_OnPlayerLeft(string playerId)
         {
             _players.Remove(playerId);
-            
-            OnPlayerLeft?.Invoke(playerId);
+            OnPlayerLeft?.Invoke(null);
         }
     }
 }
