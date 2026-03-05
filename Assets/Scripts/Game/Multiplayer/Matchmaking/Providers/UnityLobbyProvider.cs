@@ -48,6 +48,12 @@ namespace Game.Multiplayer.Matchmaking.Providers
                 
                 return await WaitForMatchReady(_cts.Token);
             }
+            // FIX: Specifically catch cancellation so it doesn't log as an error
+            catch (OperationCanceledException)
+            {
+                Debug.Log("[Lobby] Matchmaking search was cancelled by the user.");
+                return new SearchResult { Success = false };
+            }
             catch (Exception ex)
             {
                 Debug.LogError($"Lobby Matchmaking failed: {ex.Message}");
@@ -57,11 +63,14 @@ namespace Game.Multiplayer.Matchmaking.Providers
 
         private Unity.Services.Lobbies.Models.Player CreateLocalPlayer()
         {
+            string nameToSend = AccountService.Instance.PlayerName;
+            Debug.Log($"[Lobby] Sharing local player name: {nameToSend}");
+
             return new Unity.Services.Lobbies.Models.Player(
                 id: AccountService.Instance.PlayerId,
                 data: new Dictionary<string, PlayerDataObject>
                 {
-                    { "PlayerName", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, AccountService.Instance.PlayerName) }
+                    { "PlayerName", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, nameToSend) }
                 }
             );
         }
@@ -73,7 +82,9 @@ namespace Game.Multiplayer.Matchmaking.Providers
             foreach (var p in _currentLobby.Players)
             {
                 _indexToIdMap[_currentLobby.Players.IndexOf(p)] = p.Id;
-                OnPlayerJoined?.Invoke(MapToSearchPlayer(p));
+                SearchPlayer sp = MapToSearchPlayer(p);
+                Debug.Log($"[Lobby] Initial Sync: Received player name: {sp.playerName}");
+                OnPlayerJoined?.Invoke(sp);
             }
 
             LobbyEventCallbacks callbacks = new LobbyEventCallbacks();
@@ -85,7 +96,9 @@ namespace Game.Multiplayer.Matchmaking.Providers
                     if (!_indexToIdMap.ContainsValue(changes.Player.Id))
                     {
                         _indexToIdMap[changes.PlayerIndex] = changes.Player.Id;
-                        OnPlayerJoined?.Invoke(MapToSearchPlayer(changes.Player));
+                        SearchPlayer sp = MapToSearchPlayer(changes.Player);
+                        Debug.Log($"[Lobby] Event: New player joined. Received name: {sp.playerName}");
+                        OnPlayerJoined?.Invoke(sp);
                     }
                 }
             };
@@ -122,13 +135,27 @@ namespace Game.Multiplayer.Matchmaking.Providers
 
         public async UniTask CancelAsync()
         {
+            _cts?.Cancel();
+
+            if (_currentLobby != null)
+            {
+                try
+                {
+                    await LobbyService.Instance.RemovePlayerAsync(_currentLobby.Id, AccountService.Instance.PlayerId);
+                    Debug.Log("[Lobby] Successfully removed self from lobby.");
+                }
+                catch (Exception ex)
+                {
+                    Debug.LogWarning($"[Lobby] Failed to notify server of leave: {ex.Message}");
+                }
+            }
+
             if (_lobbyEvents != null)
             {
                 await _lobbyEvents.UnsubscribeAsync();
                 _lobbyEvents = null;
             }
 
-            _cts?.Cancel();
             _currentLobby = null;
         }
 
