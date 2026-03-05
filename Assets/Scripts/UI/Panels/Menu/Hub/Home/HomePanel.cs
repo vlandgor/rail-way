@@ -2,6 +2,7 @@ using Game.Multiplayer;
 using Game.Multiplayer.Matchmaking;
 using UI.Base;
 using UI.Panels.Menu.GameModes;
+using UI.Panels.Menu.Matchmaking;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,15 +10,16 @@ namespace UI.Panels.Menu.Hub.Home
 {
     public class HomePanel : BasePanel
     {
+        [SerializeField] private MatchmakingSearch _matchmakingSearch;
+        
         [Header("Panels")]
         [SerializeField] private GameModesPanel _gameModesPanel;
+        [SerializeField] private MatchmakingSearchPanel _matchmakingSearchPanel;
         
         [Header("UI Elements")]
         [SerializeField] private Button _customLobbyButton;
         [SerializeField] private Button _playButton;
         [SerializeField] private Button _gameModesButton;
-
-        private MatchmakingCoordinator _matchmakingCoordinator = new();
 
         private void Start()
         {
@@ -38,10 +40,10 @@ namespace UI.Panels.Menu.Hub.Home
             
         }
 
-        private async void HandlePlayButtonClicked()
+        private void HandlePlayButtonClicked()
         {
-            _playButton.interactable = false;
-            await _matchmakingCoordinator.StartMatchmaking();
+            _matchmakingSearchPanel.Enable();
+            _matchmakingSearchPanel.StartSearch();
         }
         
         private void HandleGameModesButtonClicked()

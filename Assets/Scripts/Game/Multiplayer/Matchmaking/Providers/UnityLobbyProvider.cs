@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using Game.Multiplayer.Matchmaking.Data;
 using Services.Account;
 using Unity.Services.Lobbies;
 using Unity.Services.Lobbies.Models;
@@ -11,27 +12,40 @@ namespace Game.Multiplayer.Matchmaking.Providers
 {
     public class UnityLobbyProvider : IMatchmakingProvider
     {
-        private Lobby _currentLobby;
-        private CancellationTokenSource _cts;
-        private const int MaxPlayers = 2;
+        public event Action<SearchPlayer> OnPlayerJoined;
+        public event Action<string> OnPlayerLeft;
 
-        public async UniTask<SearchResult> FindMatchAsync()
+        private Lobby _currentLobby;
+        private ILobbyEvents _lobbyEvents;
+        private CancellationTokenSource _cts;
+        private int _maxPlayers;
+
+        private readonly Dictionary<int, string> _indexToIdMap = new();
+
+        public async UniTask<SearchResult> FindMatchAsync(int maxPlayers)
         {
+            _maxPlayers = maxPlayers;
+            
             _cts?.Cancel();
             _cts = new CancellationTokenSource();
 
             try
             {
+                Unity.Services.Lobbies.Models.Player player = CreateLocalPlayer();
+
                 try
                 {
-                    _currentLobby = await LobbyService.Instance.QuickJoinLobbyAsync();
+                    QuickJoinLobbyOptions joinOptions = new() { Player = player };
+                    _currentLobby = await LobbyService.Instance.QuickJoinLobbyAsync(joinOptions);
                 }
                 catch
                 {
-                    _currentLobby = await CreateLobby();
+                    _currentLobby = await CreateLobby(player);
                 }
 
+                await SubscribeToEvents(_currentLobby.Id);
                 StartHeartbeat(_cts.Token).Forget();
+                
                 return await WaitForMatchReady(_cts.Token);
             }
             catch (Exception ex)
@@ -40,14 +54,84 @@ namespace Game.Multiplayer.Matchmaking.Providers
                 return new SearchResult { Success = false };
             }
         }
-        
-        public UniTask CancelAsync()
+
+        private Unity.Services.Lobbies.Models.Player CreateLocalPlayer()
         {
+            return new Unity.Services.Lobbies.Models.Player(
+                id: AccountService.Instance.PlayerId,
+                data: new Dictionary<string, PlayerDataObject>
+                {
+                    { "PlayerName", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, AccountService.Instance.PlayerName) }
+                }
+            );
+        }
+
+        private async UniTask SubscribeToEvents(string lobbyId)
+        {
+            _indexToIdMap.Clear();
+    
+            foreach (var p in _currentLobby.Players)
+            {
+                _indexToIdMap[_currentLobby.Players.IndexOf(p)] = p.Id;
+                OnPlayerJoined?.Invoke(MapToSearchPlayer(p));
+            }
+
+            LobbyEventCallbacks callbacks = new LobbyEventCallbacks();
+    
+            callbacks.PlayerJoined += (players) =>
+            {
+                foreach (LobbyPlayerJoined changes in players)
+                {
+                    if (!_indexToIdMap.ContainsValue(changes.Player.Id))
+                    {
+                        _indexToIdMap[changes.PlayerIndex] = changes.Player.Id;
+                        OnPlayerJoined?.Invoke(MapToSearchPlayer(changes.Player));
+                    }
+                }
+            };
+
+            callbacks.PlayerLeft += (playerIndices) =>
+            {
+                foreach (int index in playerIndices)
+                {
+                    if (_indexToIdMap.TryGetValue(index, out string playerId))
+                    {
+                        OnPlayerLeft?.Invoke(playerId);
+                        _indexToIdMap.Remove(index);
+                    }
+                }
+            };
+
+            _lobbyEvents = await LobbyService.Instance.SubscribeToLobbyEventsAsync(lobbyId, callbacks);
+        }
+
+        private SearchPlayer MapToSearchPlayer(Unity.Services.Lobbies.Models.Player player)
+        {
+            string name = "Unknown";
+            if (player.Data != null && player.Data.TryGetValue("PlayerName", out var data))
+            {
+                name = data.Value;
+            }
+
+            return new SearchPlayer
+            {
+                playerId = player.Id,
+                playerName = name
+            };
+        }
+
+        public async UniTask CancelAsync()
+        {
+            if (_lobbyEvents != null)
+            {
+                await _lobbyEvents.UnsubscribeAsync();
+                _lobbyEvents = null;
+            }
+
             _cts?.Cancel();
             _currentLobby = null;
-            return UniTask.CompletedTask;
         }
-        
+
         public async UniTask UpdateLobbyStateAsync(string lobbyId, string state)
         {
             var data = new Dictionary<string, DataObject>
@@ -58,12 +142,14 @@ namespace Game.Multiplayer.Matchmaking.Providers
             await LobbyService.Instance.UpdateLobbyAsync(lobbyId, new UpdateLobbyOptions { Data = data });
         }
 
-        public void Dispose() => _cts?.Cancel();
-
-        private async UniTask<Lobby> CreateLobby()
+        private async UniTask<Lobby> CreateLobby(Unity.Services.Lobbies.Models.Player player)
         {
-            var options = new CreateLobbyOptions { IsPrivate = false };
-            return await LobbyService.Instance.CreateLobbyAsync("QuickMatch", MaxPlayers, options);
+            CreateLobbyOptions options = new() 
+            { 
+                IsPrivate = false,
+                Player = player
+            };
+            return await LobbyService.Instance.CreateLobbyAsync("QuickMatch", _maxPlayers, options);
         }
 
         private async UniTaskVoid StartHeartbeat(CancellationToken ct)
@@ -86,7 +172,7 @@ namespace Game.Multiplayer.Matchmaking.Providers
 
                 bool isHost = _currentLobby.HostId == AccountService.Instance.PlayerId;
 
-                if (isHost && _currentLobby.Players.Count == MaxPlayers)
+                if (isHost && _currentLobby.Players.Count == _maxPlayers)
                 {
                     return new SearchResult { Success = true, IsHost = true, LobbyId = _currentLobby.Id };
                 }
@@ -101,6 +187,12 @@ namespace Game.Multiplayer.Matchmaking.Providers
             }
 
             return new SearchResult { Success = false };
+        }
+
+        public void Dispose()
+        {
+            _cts?.Cancel();
+            _lobbyEvents?.UnsubscribeAsync();
         }
     }
 }

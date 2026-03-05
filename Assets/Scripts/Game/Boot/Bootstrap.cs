@@ -1,5 +1,5 @@
 using System.Collections.Generic;
-using Game.Core.Player.Loading;
+using Game.Profile.Loading;
 using Services.Account;
 using Services.Data;
 using Services.Loading;

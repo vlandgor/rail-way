@@ -4,7 +4,7 @@ using Game.Core.Player.Customization;
 using Game.Core.Player.Meta;
 using Services.Loading.Operations;
 
-namespace Game.Core.Player.Loading
+namespace Game.Profile.Loading
 {
     public class InitializePlayerOperation : ILoadingOperation
     {

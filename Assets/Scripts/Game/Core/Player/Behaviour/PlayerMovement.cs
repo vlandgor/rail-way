@@ -1,13 +1,12 @@
 using System;
 using Game.Core.Rail;
-using Game.Rail;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Splines;
 
-namespace Game.Player.Behaviour
+namespace Game.Core.Player.Behaviour
 {
-    public class LocalPlayerMovement : MonoBehaviour
+    public class PlayerMovement : MonoBehaviour
     {
         [Header("Movement Settings")]
         [SerializeField] private float speed = 5f;

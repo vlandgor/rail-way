@@ -1,4 +1,5 @@
 using Game.Core.Player;
+using Game.Core.Player.Local;
 using Game.Core.Rail;
 using Unity.Netcode;
 using UnityEngine;
@@ -7,7 +8,7 @@ namespace Game.Multiplayer.Player
 {
     public class NetworkPlayer : NetworkBehaviour
     {
-        [SerializeField] private LocalPlayer _localPlayer;
+        [SerializeField] private LocalPlayer localPlayer;
         
         public bool IsChaser { get; private set; }
 

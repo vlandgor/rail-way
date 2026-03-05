@@ -2,16 +2,16 @@ using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-namespace Game.Player.Behaviour
+namespace Game.Core.Player.Input
 {
-    public class LocalPlayerInput : MonoBehaviour
+    public class PlayerInput : MonoBehaviour
     {
         public event Action<Vector2Int> OnDirectionInput;
         
         [Header("Input Settings")]
-        [SerializeField] private float swipeThreshold = 50f; // Minimum distance for swipe
+        [SerializeField] private float swipeThreshold = 50f;
         
-        private PlayerInput playerInput;
+        private UnityEngine.InputSystem.PlayerInput playerInput;
         private InputAction moveAction;
         private InputAction pointerPositionAction;
         private InputAction pointerPressAction;
@@ -21,7 +21,7 @@ namespace Game.Player.Behaviour
         
         private void Awake()
         {
-            playerInput = GetComponent<PlayerInput>();
+            playerInput = GetComponent<UnityEngine.InputSystem.PlayerInput>();
             
             // Get references to actions
             moveAction = playerInput.actions["Move"];

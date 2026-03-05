@@ -1,14 +1,14 @@
+using Game.Core.Player.Behaviour;
+using Game.Core.Player.Input;
 using Game.Core.Rail;
-using Game.Player.Behaviour;
-using Game.Rail;
 using UnityEngine;
 
-namespace Game.Core.Player
+namespace Game.Core.Player.Local
 {
     public class LocalPlayer : MonoBehaviour
     {
-        [SerializeField] private LocalPlayerInput _localPlayerInput;
-        [SerializeField] private LocalPlayerMovement _movement;
+        [SerializeField] private PlayerInput playerInput;
+        [SerializeField] private PlayerMovement _movement;
         [SerializeField] private RailGraph railGraph;
         
         [Header("Initialization")]
@@ -19,12 +19,12 @@ namespace Game.Core.Player
         private void Start()
         {
             InitializePosition();
-            _localPlayerInput.OnDirectionInput += LocalPlayerInput_OnDirectionInput;
+            playerInput.OnDirectionInput += PlayerInputOnDirectionInput;
         }
 
         private void OnDestroy()
         {
-            _localPlayerInput.OnDirectionInput -= LocalPlayerInput_OnDirectionInput;
+            playerInput.OnDirectionInput -= PlayerInputOnDirectionInput;
         }
 
         private void InitializePosition()
@@ -45,7 +45,7 @@ namespace Game.Core.Player
             }
         }
         
-        private void LocalPlayerInput_OnDirectionInput(Vector2Int direction)
+        private void PlayerInputOnDirectionInput(Vector2Int direction)
         {
             if (_movement.IsMoving)
             {
