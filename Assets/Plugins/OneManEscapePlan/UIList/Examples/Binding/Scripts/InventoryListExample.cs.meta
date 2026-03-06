@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 5e5b6b2cc8ccf2d448898d55703ab979
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 146463
+  packageName: Generic UI Lists
+  packageVersion: 1.1.5
+  assetPath: Assets/OneManEscapePlan/UIList/Examples/Binding/Scripts/InventoryListExample.cs
+  uploadId: 743896

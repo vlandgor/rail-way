@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 94e64b18add91cc4ba705f92df566a95
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 146463
+  packageName: Generic UI Lists
+  packageVersion: 1.1.5
+  assetPath: Assets/OneManEscapePlan/UIList/Scripts/ScrollingUIListController.cs
+  uploadId: 743896

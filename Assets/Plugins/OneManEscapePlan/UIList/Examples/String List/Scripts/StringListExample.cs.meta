@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 0ed806658be0ff741898b09c317d962c
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 146463
+  packageName: Generic UI Lists
+  packageVersion: 1.1.5
+  assetPath: Assets/OneManEscapePlan/UIList/Examples/String List/Scripts/StringListExample.cs
+  uploadId: 743896

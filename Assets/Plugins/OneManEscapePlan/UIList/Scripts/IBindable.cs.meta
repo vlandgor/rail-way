@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 4611c8857216a73428fe95f552ce676f
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 146463
+  packageName: Generic UI Lists
+  packageVersion: 1.1.5
+  assetPath: Assets/OneManEscapePlan/UIList/Scripts/IBindable.cs
+  uploadId: 743896

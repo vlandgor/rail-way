@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 1296f1ab9ad3b1349a63c82d7b76cf83
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 146463
+  packageName: Generic UI Lists
+  packageVersion: 1.1.5
+  assetPath: Assets/OneManEscapePlan/UIList/Scripts/UIListController.cs
+  uploadId: 743896

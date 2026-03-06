@@ -1,0 +1,14 @@
+fileFormatVersion: 2
+guid: b6dc89c8a0cf8a54383da2c801575669
+PrefabImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 146463
+  packageName: Generic UI Lists
+  packageVersion: 1.1.5
+  assetPath: Assets/OneManEscapePlan/UIList/Examples/Multiselect List/Prefabs/EquipmentListItemView.prefab
+  uploadId: 743896

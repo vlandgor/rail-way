@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: bdd226ca3001c5247ab83c98519ba235
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 146463
+  packageName: Generic UI Lists
+  packageVersion: 1.1.5
+  assetPath: Assets/OneManEscapePlan/UIList/Examples/Performance Test/Scripts/TestListItemModel.cs
+  uploadId: 743896
