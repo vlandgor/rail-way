@@ -66,17 +66,13 @@ namespace Game.Multiplayer.Matchmaking
 
         private async UniTask ProcessMatchResult(SearchResult result)
         {
-            if (result.IsHost)
-            {
-                await _provider.UpdateLobbyStateAsync(result.LobbyId, "starting");
-            }
-
             Queue<ILoadingOperation> operations = new Queue<ILoadingOperation>();
 
             operations.Enqueue(new LoadSceneOperation("Game_Scene"));
             operations.Enqueue(new InitializeMultiplayerSession());
-            operations.Enqueue(new StartNetworkOperation(result.IsHost));
-            
+    
+            operations.Enqueue(new StartNetworkOperation(result.IsHost, result.RelayJoinCode));
+    
             _isMatchmaking = false;
             await LoadingService.Instance.Load(operations);
         }

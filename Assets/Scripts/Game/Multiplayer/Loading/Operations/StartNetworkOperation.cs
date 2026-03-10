@@ -1,24 +1,72 @@
 using System;
 using Cysharp.Threading.Tasks;
 using Services.Loading.Operations;
+using Unity.Netcode;
+using Unity.Netcode.Transports.UTP;
+using Unity.Services.Relay;
+using Unity.Services.Relay.Models;
+using UnityEngine;
 
 namespace Game.Multiplayer.Loading.Operations
 {
     public class StartNetworkOperation : ILoadingOperation
     {
         private readonly bool _isHost;
-        public string Description => _isHost ? "Starting Host..." : "Joining Game...";
+        private readonly string _joinCode;
 
-        public StartNetworkOperation(bool isHost) => _isHost = isHost;
+        public string Description => _isHost ? "Starting Host via Relay..." : "Joining Game via Relay...";
+
+        public StartNetworkOperation(bool isHost, string joinCode)
+        {
+            _isHost = isHost;
+            _joinCode = joinCode;
+        }
 
         public async UniTask Execute(IProgress<float> progress)
         {
-            progress.Report(0.5f);
-            if (_isHost)
-                Unity.Netcode.NetworkManager.Singleton.StartHost();
-            else
-                Unity.Netcode.NetworkManager.Singleton.StartClient();
-        
+            progress.Report(0.1f);
+
+            var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
+
+            try
+            {
+                if (_isHost)
+                {
+                    JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(_joinCode);
+                    
+                    transport.SetHostRelayData(
+                        joinAllocation.RelayServer.IpV4,
+                        (ushort)joinAllocation.RelayServer.Port,
+                        joinAllocation.AllocationIdBytes,
+                        joinAllocation.Key,
+                        joinAllocation.ConnectionData
+                    );
+
+                    progress.Report(0.5f);
+                    NetworkManager.Singleton.StartHost();
+                }
+                else
+                {
+                    JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(_joinCode);
+
+                    transport.SetClientRelayData(
+                        joinAllocation.RelayServer.IpV4,
+                        (ushort)joinAllocation.RelayServer.Port,
+                        joinAllocation.AllocationIdBytes,
+                        joinAllocation.Key,
+                        joinAllocation.ConnectionData,
+                        joinAllocation.HostConnectionData
+                    );
+
+                    progress.Report(0.5f);
+                    NetworkManager.Singleton.StartClient();
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Relay error: {e.Message}");
+            }
+
             await UniTask.Yield();
             progress.Report(1f);
         }

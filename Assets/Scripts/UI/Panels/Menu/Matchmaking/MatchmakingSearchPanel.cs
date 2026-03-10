@@ -37,7 +37,7 @@ namespace UI.Panels.Menu.Matchmaking
 
         public void StartSearch()
         {
-            int maxPlayers = 7;
+            int maxPlayers = 2;
             
             _lobbyPlayersContainer.InitializeSlots(maxPlayers);
             _matchmakingSearch.StartMatchmakingSearch(maxPlayers);
