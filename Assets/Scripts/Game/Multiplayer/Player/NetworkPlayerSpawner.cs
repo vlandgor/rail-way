@@ -1,8 +1,5 @@
 using System.Collections.Generic;
-using Game.Core.Player.Customization;
-using Game.Core.Player.Meta;
 using Game.Core.Rail;
-using Game.Rail;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -16,7 +13,7 @@ namespace Game.Multiplayer.Player
         
         private readonly Dictionary<ulong, NetworkPlayer> _players = new();
         
-        public void SpawnPlayer(ulong clientId, IRemotePlayerMetaData playerMetaData, IRemotePlayerCustomizationData playerCustomizationData)
+        public void SpawnPlayer(ulong clientId)
         {
             if (!NetworkManager.Singleton.IsServer)
                 return;
@@ -27,10 +24,6 @@ namespace Game.Multiplayer.Player
             int spawnNodeId = (int)(clientId % (ulong)railGraph.StopPoints.Count);
         
             NetworkPlayer player = Instantiate(playerPrefab);
-        
-            NetworkObject netObj = player.GetComponent<NetworkObject>();
-            netObj.SpawnAsPlayerObject(clientId);
-            //player.Spawn(spawnNodeId);
         
             _players.Add(clientId, player);
         }

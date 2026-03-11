@@ -7,19 +7,23 @@ namespace Game.Multiplayer.Session
 {
     public class NetworkLifeCycleHandler : NetworkBehaviour
     {
-        [SerializeField] private NetworkPlayerSpawner networkPlayerSpawner;
+        [SerializeField] private NetworkPlayerSpawner _networkPlayerSpawner;
 
         public override void OnNetworkSpawn()
         {
             NetworkManager.Singleton.OnClientDisconnectCallback += OnDisconnect;
 
+            Debug.Log("<color=green>OnNetworkSpawn</color>");
+            
             if (IsServer)
             {
+                Debug.Log("<color=yellow>OnNetworkSpawn</color>");
+                
                 NetworkManager.Singleton.OnClientConnectedCallback += OnClientConnected;
 
-                if (NetworkManager.Singleton.IsServer)
+                foreach (var client in NetworkManager.Singleton.ConnectedClientsList)
                 {
-                    OnClientConnected(NetworkManager.ServerClientId);
+                    OnClientConnected(client.ClientId);
                 }
             }
         }
@@ -39,12 +43,13 @@ namespace Game.Multiplayer.Session
 
         private void OnClientConnected(ulong clientId)
         {
-            
+            Debug.Log($"<color=green>Client {clientId} connected</color>");
+            _networkPlayerSpawner.SpawnPlayer(clientId);
         }
 
         private void OnDisconnect(ulong clientId)
         {
-            if (clientId == NetworkManager.ServerClientId || clientId == NetworkManager.Singleton.LocalClientId)
+            if (clientId == NetworkManager.ServerClientId || (NetworkManager.Singleton != null && clientId == NetworkManager.Singleton.LocalClientId))
             {
                 LeaveSession();
             }
