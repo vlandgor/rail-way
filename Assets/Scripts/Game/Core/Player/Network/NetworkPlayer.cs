@@ -92,7 +92,7 @@ namespace Game.Core.Player.Network
                 return;
             }
 
-            var nextSegment = _railGraph.GetNextSegment(CurrentStopPointId, direction);
+            var nextSegment = _railGraph.GetNextSegment(CurrentStopPointId, direction, transform.forward);
             
             if (nextSegment != null)
             {
