@@ -3,12 +3,12 @@ using Game.Core.Rail;
 using Unity.Netcode;
 using UnityEngine;
 
-namespace Game.Multiplayer.Player
+namespace Game.Core.Player.Network
 {
     public class NetworkPlayerSpawner : NetworkBehaviour
     {
         [Header("Dependencies")]
-        [SerializeField] private RailGraph railGraph;
+        [SerializeField] private RailGraph _railGraph;
         [SerializeField] private NetworkPlayer playerPrefab;
         
         private readonly Dictionary<ulong, NetworkPlayer> _players = new();
@@ -21,14 +21,15 @@ namespace Game.Multiplayer.Player
             if (_players.ContainsKey(clientId))
                 return;
         
-            int spawnNodeId = (int)(clientId % (ulong)railGraph.StopPoints.Count);
-            Vector3 spawnPosition = railGraph.StopPoints[spawnNodeId].WorldPosition;
+            int spawnNodeId = (int)(clientId % (ulong)_railGraph.StopPoints.Count);
+            Vector3 spawnPosition = _railGraph.StopPoints[spawnNodeId].WorldPosition;
         
             NetworkPlayer player = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
-            
             NetworkObject netObj = player.GetComponent<NetworkObject>();
             netObj.SpawnAsPlayerObject(clientId);
         
+            player.Initialize(_railGraph, spawnNodeId);
+            
             _players.Add(clientId, player);
         }
         

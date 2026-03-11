@@ -28,7 +28,7 @@ namespace Game.Core.Player.Local
         {
             playerInput.OnDirectionInput -= PlayerInputOnDirectionInput;
         }
-
+        
         private void InitializePosition()
         {
             if (railGraph == null)

@@ -1,4 +1,4 @@
-using Game.Multiplayer.Player;
+using Game.Core.Player.Network;
 using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.SceneManagement;
