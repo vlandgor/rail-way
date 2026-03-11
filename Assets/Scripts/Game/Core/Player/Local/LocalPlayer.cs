@@ -1,3 +1,4 @@
+using Game.Core.Player.Avatar;
 using Game.Core.Player.Behaviour;
 using Game.Core.Player.Input;
 using Game.Core.Rail;
@@ -7,6 +8,7 @@ namespace Game.Core.Player.Local
 {
     public class LocalPlayer : MonoBehaviour
     {
+        [SerializeField] private PlayerAvatar _playerAvatar;
         [SerializeField] private PlayerInput playerInput;
         [SerializeField] private PlayerMovement _movement;
         [SerializeField] private RailGraph railGraph;

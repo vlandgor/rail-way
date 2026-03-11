@@ -22,8 +22,12 @@ namespace Game.Multiplayer.Player
                 return;
         
             int spawnNodeId = (int)(clientId % (ulong)railGraph.StopPoints.Count);
+            Vector3 spawnPosition = railGraph.StopPoints[spawnNodeId].WorldPosition;
         
-            NetworkPlayer player = Instantiate(playerPrefab);
+            NetworkPlayer player = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
+            
+            NetworkObject netObj = player.GetComponent<NetworkObject>();
+            netObj.SpawnAsPlayerObject(clientId);
         
             _players.Add(clientId, player);
         }
