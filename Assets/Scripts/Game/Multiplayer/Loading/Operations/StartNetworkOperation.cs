@@ -32,14 +32,14 @@ namespace Game.Multiplayer.Loading.Operations
             {
                 if (_isHost)
                 {
-                    JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(_joinCode);
+                    Allocation allocation = await RelayService.Instance.CreateAllocationAsync(4);
                     
                     transport.SetHostRelayData(
-                        joinAllocation.RelayServer.IpV4,
-                        (ushort)joinAllocation.RelayServer.Port,
-                        joinAllocation.AllocationIdBytes,
-                        joinAllocation.Key,
-                        joinAllocation.ConnectionData
+                        allocation.RelayServer.IpV4,
+                        (ushort)allocation.RelayServer.Port,
+                        allocation.AllocationIdBytes,
+                        allocation.Key,
+                        allocation.ConnectionData
                     );
 
                     progress.Report(0.5f);

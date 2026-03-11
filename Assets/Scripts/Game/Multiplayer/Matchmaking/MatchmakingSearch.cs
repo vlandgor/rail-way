@@ -6,7 +6,9 @@ using Game.Multiplayer.Matchmaking.Data;
 using Game.Multiplayer.Matchmaking.Providers;
 using Services.Loading;
 using Services.Loading.Operations;
+using Unity.Netcode;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Game.Multiplayer.Matchmaking
 {
@@ -16,9 +18,7 @@ namespace Game.Multiplayer.Matchmaking
         public event Action<string> OnPlayerLeft;
         
         private readonly IMatchmakingProvider _provider = new UnityLobbyProvider();
-        
         private Dictionary<string, SearchPlayer> _players = new();
-        
         private bool _isMatchmaking;
         
         public int MaxPlayers { get; private set; }
@@ -50,7 +50,6 @@ namespace Game.Multiplayer.Matchmaking
             else
             {
                 _isMatchmaking = false;
-                Debug.LogWarning("Matchmaking failed or was cancelled.");
             }
         }
         
@@ -66,15 +65,17 @@ namespace Game.Multiplayer.Matchmaking
 
         private async UniTask ProcessMatchResult(SearchResult result)
         {
-            Queue<ILoadingOperation> operations = new Queue<ILoadingOperation>();
-
-            operations.Enqueue(new LoadSceneOperation("Game_Scene"));
-            operations.Enqueue(new InitializeMultiplayerSession());
-    
-            operations.Enqueue(new StartNetworkOperation(result.IsHost, result.RelayJoinCode));
-    
-            _isMatchmaking = false;
-            await LoadingService.Instance.Load(operations);
+            if (result.IsHost)
+            {
+                NetworkManager.Singleton.SceneManager.LoadScene("Game_Scene", LoadSceneMode.Single);
+            }
+            
+            // Queue<ILoadingOperation> operations = new Queue<ILoadingOperation>();
+            //
+            // operations.Enqueue(new LoadSceneOperation("Game_Scene"));
+            //
+            // _isMatchmaking = false;
+            // await LoadingService.Instance.Load(operations);
         }
         
         private void Provider_OnPlayerJoined(SearchPlayer player)
@@ -86,7 +87,7 @@ namespace Game.Multiplayer.Matchmaking
         private void Provider_OnPlayerLeft(string playerId)
         {
             _players.Remove(playerId);
-            OnPlayerLeft?.Invoke(null);
+            OnPlayerLeft?.Invoke(playerId);
         }
     }
 }

@@ -8,6 +8,8 @@ using Unity.Services.Lobbies;
 using Unity.Services.Lobbies.Models;
 using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
+using Unity.Netcode;
+using Unity.Netcode.Transports.UTP;
 using UnityEngine;
 
 namespace Game.Multiplayer.Matchmaking.Providers
@@ -27,7 +29,6 @@ namespace Game.Multiplayer.Matchmaking.Providers
         public async UniTask<SearchResult> FindMatchAsync(int maxPlayers)
         {
             _maxPlayers = maxPlayers;
-            
             _cts?.Cancel();
             _cts = new CancellationTokenSource();
 
@@ -39,20 +40,19 @@ namespace Game.Multiplayer.Matchmaking.Providers
                 {
                     QuickJoinLobbyOptions joinOptions = new() { Player = player };
                     _currentLobby = await LobbyService.Instance.QuickJoinLobbyAsync(joinOptions);
+                    
+                    await InitializeClientNetwork();
                 }
                 catch
                 {
                     _currentLobby = await CreateLobby(player);
+                    await InitializeHostNetwork();
                 }
 
                 await SubscribeToEvents(_currentLobby.Id);
                 StartHeartbeat(_cts.Token).Forget();
                 
                 return await WaitForMatchReady(_cts.Token);
-            }
-            catch (OperationCanceledException)
-            {
-                return new SearchResult { Success = false };
             }
             catch (Exception ex)
             {
@@ -61,58 +61,89 @@ namespace Game.Multiplayer.Matchmaking.Providers
             }
         }
 
+        private async UniTask InitializeHostNetwork()
+        {
+            Allocation allocation = await RelayService.Instance.CreateAllocationAsync(_maxPlayers);
+            string joinCode = await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+
+            var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
+            transport.SetHostRelayData(
+                allocation.RelayServer.IpV4,
+                (ushort)allocation.RelayServer.Port,
+                allocation.AllocationIdBytes,
+                allocation.Key,
+                allocation.ConnectionData
+            );
+
+            await UpdateLobbyWithRelay(joinCode);
+            NetworkManager.Singleton.StartHost();
+        }
+
+        private async UniTask InitializeClientNetwork()
+        {
+            string joinCode = null;
+            
+            while (string.IsNullOrEmpty(joinCode))
+            {
+                _currentLobby = await LobbyService.Instance.GetLobbyAsync(_currentLobby.Id);
+                if (_currentLobby.Data != null && _currentLobby.Data.TryGetValue("RelayCode", out var code))
+                {
+                    joinCode = code.Value;
+                }
+                else
+                {
+                    await UniTask.Delay(1000);
+                }
+            }
+
+            JoinAllocation joinAllocation = await RelayService.Instance.JoinAllocationAsync(joinCode);
+            var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
+            
+            transport.SetClientRelayData(
+                joinAllocation.RelayServer.IpV4,
+                (ushort)joinAllocation.RelayServer.Port,
+                joinAllocation.AllocationIdBytes,
+                joinAllocation.Key,
+                joinAllocation.ConnectionData,
+                joinAllocation.HostConnectionData
+            );
+
+            NetworkManager.Singleton.StartClient();
+        }
+
         private async UniTask<SearchResult> WaitForMatchReady(CancellationToken ct)
         {
             while (!ct.IsCancellationRequested)
             {
-                _currentLobby = await LobbyService.Instance.GetLobbyAsync(_currentLobby.Id);
-
-                bool isHost = _currentLobby.HostId == AccountService.Instance.PlayerId;
-
-                if (isHost && _currentLobby.Players.Count == _maxPlayers)
-                {
-                    string joinCode = await CreateRelayAllocation();
-                    await UpdateLobbyWithRelay(joinCode);
-
-                    return new SearchResult 
-                    { 
-                        Success = true, 
-                        IsHost = true, 
-                        LobbyId = _currentLobby.Id,
-                        RelayJoinCode = joinCode
-                    };
-                }
-
-                if (!isHost && _currentLobby.Data != null && 
-                    _currentLobby.Data.TryGetValue("RelayCode", out var code) && 
-                    !string.IsNullOrEmpty(code.Value))
+                if (NetworkManager.Singleton.ConnectedClients.Count >= _maxPlayers)
                 {
                     return new SearchResult 
                     { 
                         Success = true, 
-                        IsHost = false, 
-                        LobbyId = _currentLobby.Id,
-                        RelayJoinCode = code.Value
+                        IsHost = NetworkManager.Singleton.IsHost, 
+                        LobbyId = _currentLobby.Id 
                     };
                 }
 
-                await UniTask.Delay(1500, cancellationToken: ct);
+                await UniTask.Delay(1000, cancellationToken: ct);
             }
 
             return new SearchResult { Success = false };
         }
 
-        private async UniTask<string> CreateRelayAllocation()
+        public async UniTask UpdateLobbyStateAsync(string lobbyId, string state)
         {
-            Allocation allocation = await RelayService.Instance.CreateAllocationAsync(_maxPlayers);
-            return await RelayService.Instance.GetJoinCodeAsync(allocation.AllocationId);
+            var data = new Dictionary<string, DataObject>
+            {
+                { "state", new DataObject(DataObject.VisibilityOptions.Member, state) }
+            };
+            await LobbyService.Instance.UpdateLobbyAsync(lobbyId, new UpdateLobbyOptions { Data = data });
         }
 
         private async UniTask UpdateLobbyWithRelay(string joinCode)
         {
             var data = new Dictionary<string, DataObject>
             {
-                { "state", new DataObject(DataObject.VisibilityOptions.Member, "starting") },
                 { "RelayCode", new DataObject(DataObject.VisibilityOptions.Member, joinCode) }
             };
 
@@ -121,12 +152,11 @@ namespace Game.Multiplayer.Matchmaking.Providers
 
         private Unity.Services.Lobbies.Models.Player CreateLocalPlayer()
         {
-            string nameToSend = AccountService.Instance.PlayerName;
             return new Unity.Services.Lobbies.Models.Player(
                 id: AccountService.Instance.PlayerId,
                 data: new Dictionary<string, PlayerDataObject>
                 {
-                    { "PlayerName", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, nameToSend) }
+                    { "PlayerName", new PlayerDataObject(PlayerDataObject.VisibilityOptions.Member, AccountService.Instance.PlayerName) }
                 }
             );
         }
@@ -134,7 +164,6 @@ namespace Game.Multiplayer.Matchmaking.Providers
         private async UniTask SubscribeToEvents(string lobbyId)
         {
             _indexToIdMap.Clear();
-    
             foreach (var p in _currentLobby.Players)
             {
                 _indexToIdMap[_currentLobby.Players.IndexOf(p)] = p.Id;
@@ -171,44 +200,20 @@ namespace Game.Multiplayer.Matchmaking.Providers
 
         private SearchPlayer MapToSearchPlayer(Unity.Services.Lobbies.Models.Player player)
         {
-            string name = "Unknown";
-            if (player.Data != null && player.Data.TryGetValue("PlayerName", out var data))
-            {
-                name = data.Value;
-            }
-
+            string name = player.Data != null && player.Data.TryGetValue("PlayerName", out var data) ? data.Value : "Unknown";
             return new SearchPlayer { playerId = player.Id, playerName = name };
         }
 
         public async UniTask CancelAsync()
         {
             _cts?.Cancel();
+            if (NetworkManager.Singleton != null) NetworkManager.Singleton.Shutdown();
             if (_currentLobby != null)
             {
-                try
-                {
-                    await LobbyService.Instance.RemovePlayerAsync(_currentLobby.Id, AccountService.Instance.PlayerId);
-                }
-                catch (Exception ex)
-                {
-                    Debug.LogWarning(ex.Message);
-                }
+                try { await LobbyService.Instance.RemovePlayerAsync(_currentLobby.Id, AccountService.Instance.PlayerId); } catch { }
             }
-            if (_lobbyEvents != null)
-            {
-                await _lobbyEvents.UnsubscribeAsync();
-                _lobbyEvents = null;
-            }
+            if (_lobbyEvents != null) await _lobbyEvents.UnsubscribeAsync();
             _currentLobby = null;
-        }
-
-        public async UniTask UpdateLobbyStateAsync(string lobbyId, string state)
-        {
-            var data = new Dictionary<string, DataObject>
-            {
-                { "state", new DataObject(DataObject.VisibilityOptions.Member, state) }
-            };
-            await LobbyService.Instance.UpdateLobbyAsync(lobbyId, new UpdateLobbyOptions { Data = data });
         }
 
         private async UniTask<Lobby> CreateLobby(Unity.Services.Lobbies.Models.Player player)
@@ -232,7 +237,8 @@ namespace Game.Multiplayer.Matchmaking.Providers
         public void Dispose()
         {
             _cts?.Cancel();
-            _lobbyEvents?.UnsubscribeAsync();
+            _cts?.Dispose();
+            if (_lobbyEvents != null) _lobbyEvents.UnsubscribeAsync();
         }
     }
 }
