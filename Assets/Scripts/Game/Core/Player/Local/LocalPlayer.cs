@@ -14,7 +14,7 @@ namespace Game.Core.Player.Local
         [SerializeField] private PlayerMovement _playerMovement;
         [SerializeField] private PlayerInput _playerInput;
         
-        private RailGraph _railGraph;
+        private RailMap _railMap;
         
         public int CurrentStopPointId { get; private set; }
 
@@ -28,9 +28,9 @@ namespace Game.Core.Player.Local
             _playerInput.OnDirectionInput -= PlayerInputOnDirectionInput;
         }
 
-        public void Initialize(RailGraph railGraph, int startPointId)
+        public void Initialize(RailMap railMap, int startPointId)
         {
-            _railGraph = railGraph;
+            _railMap = railMap;
             CurrentStopPointId  = startPointId;
         }
         
@@ -41,13 +41,13 @@ namespace Game.Core.Player.Local
                 return;
             }
             
-            var nextSegment = _railGraph.GetNextSegment(CurrentStopPointId, direction, transform.forward);
+            var nextSegment = _railMap.GetNextSegment(CurrentStopPointId, direction, transform.forward);
             
             if (nextSegment != null)
             {
                 _playerMovement.MoveAlongSegment(
                     nextSegment, 
-                    _railGraph.GetSplineContainer(), 
+                    _railMap.Container, 
                     OnReachedStopPoint
                 );
             }

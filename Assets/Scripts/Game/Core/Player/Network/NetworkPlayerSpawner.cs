@@ -7,7 +7,7 @@ namespace Game.Core.Player.Network
 {
     public class NetworkPlayerSpawner : NetworkBehaviour
     {
-        [SerializeField] private RailGraph _railGraph;
+        [SerializeField] private RailMap railMap;
         [SerializeField] private NetworkPlayer playerPrefab;
         
         private readonly Dictionary<ulong, NetworkPlayer> _players = new();
@@ -20,8 +20,8 @@ namespace Game.Core.Player.Network
             if (_players.ContainsKey(clientId))
                 return;
         
-            int spawnNodeId = (int)(clientId % (ulong)_railGraph.StopPoints.Count);
-            Vector3 spawnPosition = _railGraph.StopPoints[spawnNodeId].WorldPosition;
+            int spawnNodeId = (int)(clientId % (ulong)railMap.Links.Count);
+            Vector3 spawnPosition = railMap.Links[spawnNodeId].WorldPosition;
         
             NetworkPlayer player = Instantiate(playerPrefab, spawnPosition, Quaternion.identity);
             NetworkObject netObj = player.GetComponent<NetworkObject>();

@@ -19,7 +19,7 @@ namespace Game.Core.Player.Network
         [SerializeField] private PlayerMovement _playerMovement;
         [SerializeField] private PlayerInput _playerInput;
         
-        private RailGraph _railGraph;
+        private RailMap _railMap;
 
         public int CurrentStopPointId;
 
@@ -72,11 +72,11 @@ namespace Game.Core.Player.Network
 
         private void EnsureRailGraphConnection()
         {
-            if (_railGraph == null)
+            if (_railMap == null)
             {
-                _railGraph = FindFirstObjectByType<RailGraph>();
+                _railMap = FindFirstObjectByType<RailMap>();
                 
-                if (_railGraph == null)
+                if (_railMap == null)
                 {
                     Debug.LogWarning($"[NetworkPlayer] RailGraph not found in scene yet for Player {OwnerClientId}");
                 }
@@ -87,18 +87,18 @@ namespace Game.Core.Player.Network
         {
             EnsureRailGraphConnection();
 
-            if (_railGraph == null || _playerMovement.IsMoving)
+            if (_railMap == null || _playerMovement.IsMoving)
             {
                 return;
             }
 
-            var nextSegment = _railGraph.GetNextSegment(CurrentStopPointId, direction, transform.forward);
+            var nextSegment = _railMap.GetNextSegment(CurrentStopPointId, direction, transform.forward);
             
             if (nextSegment != null)
             {
                 _playerMovement.MoveAlongSegment(
                     nextSegment, 
-                    _railGraph.GetSplineContainer(), 
+                    _railMap.Container, 
                     OnReachedStopPoint
                 );
             }

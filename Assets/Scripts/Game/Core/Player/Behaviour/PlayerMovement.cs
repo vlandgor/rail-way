@@ -71,7 +71,7 @@ namespace Game.Core.Player.Behaviour
                 
                 EvaluatePosition(_normalizedTime);
                 
-                _onReachedDestination?.Invoke(_currentSegment.EndStopPointId);
+                _onReachedDestination?.Invoke(_currentSegment.EndLinkId);
                 return;
             }
 
