@@ -20,12 +20,14 @@ namespace Game.Core.Player.Network
         [SerializeField] private PlayerInput _playerInput;
         
         private RailGraph _railGraph;
-        
-        public int CurrentStopPointId { get; private set; }
+
+        public int CurrentStopPointId;
 
         public override void OnNetworkSpawn()
         {
             base.OnNetworkSpawn();
+            
+            EnsureRailGraphConnection();
             
             if (IsOwner)
             {
@@ -53,7 +55,7 @@ namespace Game.Core.Player.Network
 
         public void Initialize(int startPointId)
         {
-            SetStopPointId(startPointId);
+            CurrentStopPointId = startPointId;
 
             if (IsServer)
             {
@@ -64,43 +66,34 @@ namespace Game.Core.Player.Network
         [ClientRpc]
         private void InitializeClientRpc(int startPointId)
         {
-            if (IsServer) return;
-
-            RailGraph graph = FindFirstObjectByType<RailGraph>(); 
-            _railGraph = graph;
-            SetStopPointId(startPointId);
+            CurrentStopPointId = startPointId;
+            EnsureRailGraphConnection();
         }
 
-        public void SetStopPointId(int stopPointId)
+        private void EnsureRailGraphConnection()
         {
-            CurrentStopPointId = stopPointId;
+            if (_railGraph == null)
+            {
+                _railGraph = FindFirstObjectByType<RailGraph>();
+                
+                if (_railGraph == null)
+                {
+                    Debug.LogWarning($"[NetworkPlayer] RailGraph not found in scene yet for Player {OwnerClientId}");
+                }
+            }
         }
         
         private void PlayerInput_OnDirectionInput(Vector2Int direction)
         {
-            if (_playerMovement.IsMoving || _railGraph == null)
+            EnsureRailGraphConnection();
+
+            if (_railGraph == null || _playerMovement.IsMoving)
             {
                 return;
             }
 
             var nextSegment = _railGraph.GetNextSegment(CurrentStopPointId, direction);
             
-            if (nextSegment != null)
-            {
-                _playerMovement.MoveAlongSegment(
-                    nextSegment, 
-                    _railGraph.GetSplineContainer(), 
-                    OnReachedStopPoint
-                );
-
-                MoveRequestServerRpc(direction);
-            }
-        }
-
-        [ServerRpc]
-        private void MoveRequestServerRpc(Vector2Int direction)
-        {
-            var nextSegment = _railGraph.GetNextSegment(CurrentStopPointId, direction);
             if (nextSegment != null)
             {
                 _playerMovement.MoveAlongSegment(
