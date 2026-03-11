@@ -1,5 +1,6 @@
 using Game.Core.Player.Avatar;
 using Game.Core.Player.Behaviour;
+using Game.Core.Player.Camera;
 using Game.Core.Player.Input;
 using Game.Core.Rail;
 using UnityEngine;
@@ -8,59 +9,45 @@ namespace Game.Core.Player.Local
 {
     public class LocalPlayer : MonoBehaviour
     {
+        [SerializeField] private PlayerCamera _playerCamera;
         [SerializeField] private PlayerAvatar _playerAvatar;
-        [SerializeField] private PlayerInput playerInput;
-        [SerializeField] private PlayerMovement _movement;
-        [SerializeField] private RailGraph railGraph;
+        [SerializeField] private PlayerMovement _playerMovement;
+        [SerializeField] private PlayerInput _playerInput;
         
-        [Header("Initialization")]
-        [SerializeField] private int _startingStopPointId = 0;
+        private RailGraph _railGraph;
         
-        private int _currentStopPointId;
+        public int CurrentStopPointId { get; private set; }
 
         private void Start()
         {
-            InitializePosition();
-            playerInput.OnDirectionInput += PlayerInputOnDirectionInput;
+            _playerInput.OnDirectionInput += PlayerInputOnDirectionInput;
         }
 
         private void OnDestroy()
         {
-            playerInput.OnDirectionInput -= PlayerInputOnDirectionInput;
+            _playerInput.OnDirectionInput -= PlayerInputOnDirectionInput;
         }
-        
-        private void InitializePosition()
+
+        public void Initialize(RailGraph railGraph, int startPointId)
         {
-            if (railGraph == null)
-                return;
-            
-            _currentStopPointId = _startingStopPointId;
-            
-            Vector3 startPosition = railGraph.GetStopPointPosition(_currentStopPointId);
-            
-            transform.position = startPosition;
-            
-            Vector3 initialDirection = railGraph.GetStopPointTangent(_currentStopPointId);
-            if (initialDirection != Vector3.zero)
-            {
-                transform.forward = initialDirection;
-            }
+            _railGraph = railGraph;
+            CurrentStopPointId  = startPointId;
         }
         
         private void PlayerInputOnDirectionInput(Vector2Int direction)
         {
-            if (_movement.IsMoving)
+            if (_playerMovement.IsMoving)
             {
                 return;
             }
             
-            var nextSegment = railGraph.GetNextSegment(_currentStopPointId, direction);
+            var nextSegment = _railGraph.GetNextSegment(CurrentStopPointId, direction);
             
             if (nextSegment != null)
             {
-                _movement.MoveAlongSegment(
+                _playerMovement.MoveAlongSegment(
                     nextSegment, 
-                    railGraph.GetSplineContainer(), 
+                    _railGraph.GetSplineContainer(), 
                     OnReachedStopPoint
                 );
             }
@@ -68,7 +55,7 @@ namespace Game.Core.Player.Local
         
         private void OnReachedStopPoint(int stopPointId)
         {
-            _currentStopPointId = stopPointId;
+            CurrentStopPointId = stopPointId;
         }
     }
 }

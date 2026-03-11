@@ -7,7 +7,6 @@ namespace Game.Core.Player.Network
 {
     public class NetworkPlayerSpawner : NetworkBehaviour
     {
-        [Header("Dependencies")]
         [SerializeField] private RailGraph _railGraph;
         [SerializeField] private NetworkPlayer playerPrefab;
         
@@ -28,7 +27,7 @@ namespace Game.Core.Player.Network
             NetworkObject netObj = player.GetComponent<NetworkObject>();
             netObj.SpawnAsPlayerObject(clientId);
         
-            player.Initialize(_railGraph, spawnNodeId);
+            player.Initialize(spawnNodeId);
             
             _players.Add(clientId, player);
         }

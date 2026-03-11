@@ -629,6 +629,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60d7dcc7c0424f589a49d0f88e75b68b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _playerTransform: {fileID: 1372374998401939013}
   speed: 5
   offset: {x: 0, y: 0.1, z: 0}
 --- !u!1 &6347110148962231358

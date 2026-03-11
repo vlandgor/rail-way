@@ -51,9 +51,8 @@ namespace Game.Core.Player.Network
             }
         }
 
-        public void Initialize(RailGraph railGraph, int startPointId)
+        public void Initialize(int startPointId)
         {
-            _railGraph = railGraph;
             SetStopPointId(startPointId);
 
             if (IsServer)

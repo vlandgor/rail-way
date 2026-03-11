@@ -8,6 +8,8 @@ namespace Game.Core.Player.Behaviour
 {
     public class PlayerMovement : MonoBehaviour
     {
+        [SerializeField] private Transform _playerTransform;
+        
         [Header("Movement Settings")]
         [SerializeField] private float speed = 5f;
         [SerializeField] private Vector3 offset = new Vector3(0f, 0.1f, 0f);
@@ -94,14 +96,14 @@ namespace Game.Core.Player.Behaviour
             worldPos += right * offset.x;
             worldPos += tangentDir * offset.z;
             
-            transform.position = worldPos;
+            _playerTransform.transform.position = worldPos;
 
             if (math.lengthsq(tan) > 0.0001f)
             {
                 // Flip direction if going backward
                 if (_currentSegment.Direction < 0)
                     tangentDir = -tangentDir;
-                transform.forward = tangentDir;
+                _playerTransform.transform.forward = tangentDir;
             }
         }
 
