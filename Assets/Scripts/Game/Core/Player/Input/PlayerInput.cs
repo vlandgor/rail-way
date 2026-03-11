@@ -7,11 +7,12 @@ namespace Game.Core.Player.Input
     public class PlayerInput : MonoBehaviour
     {
         public event Action<Vector2Int> OnDirectionInput;
+
+        [SerializeField] private UnityEngine.InputSystem.PlayerInput _playerInput;
         
         [Header("Input Settings")]
         [SerializeField] private float swipeThreshold = 50f;
         
-        private UnityEngine.InputSystem.PlayerInput playerInput;
         private InputAction moveAction;
         private InputAction pointerPositionAction;
         private InputAction pointerPressAction;
@@ -19,14 +20,16 @@ namespace Game.Core.Player.Input
         private Vector2 swipeStartPosition;
         private bool isSwipeStarted;
         
+        public bool Enable { get; set; }
+        
         private void Awake()
         {
-            playerInput = GetComponent<UnityEngine.InputSystem.PlayerInput>();
+            _playerInput = GetComponent<UnityEngine.InputSystem.PlayerInput>();
             
             // Get references to actions
-            moveAction = playerInput.actions["Move"];
-            pointerPositionAction = playerInput.actions["PointerPosition"];
-            pointerPressAction = playerInput.actions["PointerPress"];
+            moveAction = _playerInput.actions["Move"];
+            pointerPositionAction = _playerInput.actions["PointerPosition"];
+            pointerPressAction = _playerInput.actions["PointerPress"];
             
             // Subscribe to events
             moveAction.performed += HandleMoveInput;
